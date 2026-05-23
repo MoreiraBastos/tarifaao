@@ -27,6 +27,9 @@ Principais entregas já implementadas:
 - Envio de contribuições de preço real por WhatsApp.
 - Guardar contribuições localmente no dispositivo.
 - Transições suaves entre 200ms e 300ms.
+- Rodapé com autoria, copyright, disclaimer e atribuição OpenStreetMap.
+- Modais de Privacidade e Termos dentro do webapp.
+- Licença proprietária em `LICENSE.md`.
 - Preparação para deploy na Vercel.
 
 ## Como funciona
@@ -55,6 +58,7 @@ tarifaao/
 │   └── yango.png
 ├── app.js
 ├── index.html
+├── LICENSE.md
 ├── README.md
 ├── styles.css
 └── vercel.json
@@ -90,6 +94,11 @@ tarifaao/
 `vercel.json`
 
 - Configuração simples para clean URLs na Vercel.
+
+`LICENSE.md`
+
+- Licença proprietária do projecto.
+- Proíbe cópia, redistribuição, uso comercial e criação de derivados sem autorização escrita.
 
 ## Tecnologias
 
@@ -155,6 +164,17 @@ As rotas rápidas ficam no `index.html`, nos botões com classe `quick-route`.
 - O geocoding/reverse geocoding usa Nominatim/OpenStreetMap.
 - Histórico e contribuições locais ficam apenas no `localStorage` do dispositivo.
 - Ao enviar por WhatsApp, os dados são enviados para o número configurado em `OWNER_WHATSAPP`.
+- O webapp inclui um modal de Privacidade com estes pontos resumidos para o utilizador final.
+
+## Termos e avisos no webapp
+
+O app inclui avisos para o utilizador final:
+
+- Tarifa.ao apresenta estimativas beta, não preços oficiais.
+- Tarifa.ao não é afiliado, patrocinado ou endossado pela Yango, Heetch, Kubinga, T'Leva ou inDrive.
+- App by Edson Moreira Bastos.
+- © 2026 Edson Moreira Bastos. Todos os direitos reservados.
+- Dados de mapa: © OpenStreetMap contributors.
 
 ## Limitações actuais
 
@@ -184,4 +204,10 @@ As rotas rápidas ficam no `index.html`, nos botões com classe `quick-route`.
 
 ## Licença
 
-Proprietário. Definir licença antes de aceitar contribuições externas.
+Este projecto é proprietário.
+
+Copyright (c) 2026 Edson Moreira Bastos.
+
+Todos os direitos reservados.
+
+Consulta `LICENSE.md` para os termos completos. O acesso ao código, repositório ou aplicação não concede autorização para copiar, modificar, distribuir, sublicenciar, vender, republicar, explorar comercialmente ou criar trabalhos derivados sem autorização prévia e por escrito.

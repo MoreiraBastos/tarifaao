@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Tarifa.ao | Comparador de táxis em Angola</title>
   <meta name="description" content="Compare tarifas estimadas de apps de táxi em Angola e ajude a comunidade a validar preços reais." />
+  <meta name="author" content="Edson Moreira Bastos" />
+  <meta name="copyright" content="Copyright 2026 Edson Moreira Bastos. Todos os direitos reservados." />
   <meta name="theme-color" content="#0f62fe" />
   <link rel="icon" type="image/png" href="assets/favicon.png" />
   <link rel="apple-touch-icon" href="assets/favicon.png" />
@@ -185,6 +187,17 @@
     </section>
   </main>
 
+  <footer class="app-footer">
+    <strong>App by Edson Moreira Bastos</strong>
+    <span>© 2026 Edson Moreira Bastos. Todos os direitos reservados.</span>
+    <span>Estimativas beta. Não afiliado à Yango, Heetch, Kubinga, T'Leva ou inDrive.</span>
+    <div class="footer-links">
+      <button type="button" id="openPrivacy">Privacidade</button>
+      <button type="button" id="openTerms">Termos</button>
+      <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a>
+    </div>
+  </footer>
+
   <nav class="bottom-nav" aria-label="Navegação principal">
     <button class="nav-item active" data-view="homeView">Início</button>
     <button class="nav-item" data-view="resultsView">Comparar</button>
@@ -228,6 +241,40 @@
       <button class="primary-btn" type="submit">Enviar por WhatsApp</button>
       <button class="ghost-btn" type="button" id="saveLocalOnly">Guardar só neste telemóvel</button>
     </form>
+  </dialog>
+
+  <dialog id="privacyDialog" class="modal legal-modal">
+    <div class="legal-panel">
+      <div class="modal-head">
+        <h3>Privacidade</h3>
+        <button type="button" class="icon-close" id="closePrivacy">×</button>
+      </div>
+
+      <div class="legal-copy">
+        <p>O Tarifa.ao é um MVP sem backend próprio nesta versão.</p>
+        <p>A localização é pedida pelo navegador apenas para preencher a origem e calcular a distância. Se não autorizares, a origem fica vazia.</p>
+        <p>Endereços e pontos escolhidos podem ser enviados ao Nominatim/OpenStreetMap para obter coordenadas ou nomes de locais.</p>
+        <p>Histórico e contribuições guardadas localmente ficam apenas neste dispositivo, através do armazenamento do navegador.</p>
+        <p>Ao enviares uma contribuição por WhatsApp, os dados da rota, app, preço e observação são partilhados com o número configurado pelo Tarifa.ao.</p>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="termsDialog" class="modal legal-modal">
+    <div class="legal-panel">
+      <div class="modal-head">
+        <h3>Termos</h3>
+        <button type="button" class="icon-close" id="closeTerms">×</button>
+      </div>
+
+      <div class="legal-copy">
+        <p>O Tarifa.ao apresenta estimativas beta para ajudar na comparação antes de pedir táxi.</p>
+        <p>Os valores apresentados não são preços oficiais e podem variar conforme trânsito, chuva, procura, disponibilidade, promoções e regras das apps.</p>
+        <p>Tarifa.ao não é afiliado, patrocinado ou endossado pela Yango, Heetch, Kubinga, T'Leva ou inDrive.</p>
+        <p>Todo o código, design, marca, conteúdo e assets do Tarifa.ao pertencem a Edson Moreira Bastos.</p>
+        <p>© 2026 Edson Moreira Bastos. Todos os direitos reservados.</p>
+      </div>
+    </div>
   </dialog>
 
   <dialog id="mapDialog" class="modal map-modal">

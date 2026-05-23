@@ -844,6 +844,10 @@ function initEvents() {
   $("#openContributeTop").addEventListener("click", openContributeDialog);
   $("#openContributeBottom").addEventListener("click", openContributeDialog);
   $("#closeContribute").addEventListener("click", () => $("#contributeDialog").close());
+  $("#openPrivacy").addEventListener("click", () => $("#privacyDialog").showModal());
+  $("#closePrivacy").addEventListener("click", () => $("#privacyDialog").close());
+  $("#openTerms").addEventListener("click", () => $("#termsDialog").showModal());
+  $("#closeTerms").addEventListener("click", () => $("#termsDialog").close());
   $("#closeMapDialog").addEventListener("click", closeMapPicker);
   $("#confirmMapLocation").addEventListener("click", closeMapPicker);
 

@@ -806,6 +806,51 @@ input:focus, select:focus, textarea:focus {
   z-index: 30;
 }
 
+.app-footer {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  gap: 6px;
+  width: min(100% - 32px, 760px);
+  margin: 0 auto 22px;
+  padding: 18px 0 4px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.app-footer strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 14px;
+  margin-top: 4px;
+}
+
+.footer-links a,
+.footer-links button {
+  min-height: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.footer-links a:hover,
+.footer-links button:hover {
+  color: var(--primary-dark);
+  text-decoration: underline;
+}
+
 .nav-item {
   flex: 1;
   border: 0;
@@ -857,6 +902,11 @@ input:focus, select:focus, textarea:focus {
   background: white;
 }
 
+.legal-panel {
+  padding: 18px;
+  background: white;
+}
+
 .modal-head {
   display: flex;
   align-items: center;
@@ -873,6 +923,24 @@ input:focus, select:focus, textarea:focus {
   border: 0;
   background: var(--surface-2);
   font-size: 26px;
+}
+
+.legal-modal {
+  width: min(100% - 32px, 560px);
+}
+
+.legal-copy {
+  margin-top: 16px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.legal-copy p {
+  margin-bottom: 12px;
+}
+
+.legal-copy p:last-child {
+  margin-bottom: 0;
 }
 
 .history-list {
@@ -963,6 +1031,10 @@ input:focus, select:focus, textarea:focus {
 @media (min-width: 768px) {
   body {
     padding-bottom: 0;
+  }
+
+  .app-footer {
+    margin-bottom: 18px;
   }
 
   .bottom-nav {
