@@ -84,6 +84,10 @@ let currentRoute = {
 };
 let currentResults = [];
 let selectedRide = null;
+let currentSort = "price";
+let backgroundMap = null;
+let backgroundRouteLine = null;
+let backgroundRouteMarkers = [];
 let pickerMap = null;
 let pickerMarker = null;
 let activeMapFieldId = null;
@@ -145,6 +149,22 @@ function formatDistance(value) {
   })} km`;
 }
 
+function getSortedResults(results = currentResults) {
+  const data = [...results];
+  if (currentSort === "eta") {
+    return data.sort((a, b) => a.eta - b.eta || a.estimate - b.estimate);
+  }
+  return data.sort((a, b) => a.estimate - b.estimate || a.eta - b.eta);
+}
+
+function updateSortToggle() {
+  $$("[data-sort]").forEach(btn => {
+    const isActive = btn.dataset.sort === currentSort;
+    btn.classList.toggle("active", isActive);
+    btn.setAttribute("aria-pressed", String(isActive));
+  });
+}
+
 function normalizePrice(value) {
   const n = Number(String(value).replace(/[^\d]/g, ""));
   return Number.isFinite(n) ? n : 0;
@@ -198,6 +218,99 @@ function updateCurrentTimeDisplay() {
   }
 }
 
+function initMapBackground() {
+  const canvas = $("#appMap");
+  if (!canvas || !window.L || backgroundMap) return;
+
+  backgroundMap = window.L.map(canvas, {
+    zoomControl: true,
+    attributionControl: false,
+    dragging: true,
+    touchZoom: true,
+    doubleClickZoom: true,
+    scrollWheelZoom: true,
+    boxZoom: true,
+    keyboard: true,
+    tap: true
+  }).setView([LUANDA_CENTER.lat, LUANDA_CENTER.lng], LUANDA_CENTER.zoom);
+
+  backgroundMap.zoomControl.setPosition("bottomright");
+
+  window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19
+  }).addTo(backgroundMap);
+
+  document.body.classList.add("leaflet-map-ready");
+  window.setTimeout(() => {
+    backgroundMap.invalidateSize();
+    updateRouteMap(currentRoute);
+  }, 80);
+}
+
+function clearBackgroundRoute() {
+  backgroundRouteMarkers.forEach(marker => marker.remove());
+  backgroundRouteMarkers = [];
+
+  if (backgroundRouteLine) {
+    backgroundRouteLine.remove();
+    backgroundRouteLine = null;
+  }
+}
+
+function createRouteMarker(point, index) {
+  return window.L.circleMarker([point.lat, point.lng], {
+    radius: index === 0 ? 7 : 8,
+    color: "#ffffff",
+    weight: 3,
+    fillColor: index === 0 ? "#071a2f" : "#0f62fe",
+    fillOpacity: 1,
+    interactive: false
+  });
+}
+
+function updateRouteMap(route = currentRoute) {
+  if (!backgroundMap || !window.L) return;
+
+  clearBackgroundRoute();
+
+  const pickup = route.pickupLocation || fieldLocations.pickupInput;
+  const destination = route.destinationLocation || fieldLocations.destinationInput;
+  const points = [pickup, destination].filter(isValidLocation);
+
+  if (!points.length) {
+    backgroundMap.setView([LUANDA_CENTER.lat, LUANDA_CENTER.lng], LUANDA_CENTER.zoom);
+    return;
+  }
+
+  points.forEach((point, index) => {
+    const marker = createRouteMarker(point, index).addTo(backgroundMap);
+    backgroundRouteMarkers.push(marker);
+  });
+
+  if (isValidLocation(pickup) && isValidLocation(destination)) {
+    const routePoints = [
+      [pickup.lat, pickup.lng],
+      [destination.lat, destination.lng]
+    ];
+
+    backgroundRouteLine = window.L.polyline(routePoints, {
+      color: "#071a2f",
+      opacity: .82,
+      weight: 4,
+      interactive: false
+    }).addTo(backgroundMap);
+
+    backgroundMap.fitBounds(window.L.latLngBounds(routePoints), {
+      padding: [96, 96],
+      maxZoom: 15,
+      animate: true,
+      duration: .25
+    });
+  } else {
+    backgroundMap.setView([points[0].lat, points[0].lng], 14);
+  }
+}
+
 function showView(viewId) {
   $$(".view").forEach(view => view.classList.remove("active"));
   const view = document.getElementById(viewId);
@@ -208,6 +321,14 @@ function showView(viewId) {
   });
 
   if (viewId === "historyView") renderHistory();
+  if (viewId === "settingsView") showSettingsPanel("main");
+}
+
+function showSettingsPanel(panel) {
+  const showHelp = panel === "help";
+  $("#settingsMainPanel")?.classList.toggle("active", !showHelp);
+  $("#settingsHelpPanel")?.classList.toggle("active", showHelp);
+  $("#settingsHelpPanel")?.setAttribute("aria-hidden", String(!showHelp));
 }
 
 function estimateRides(route) {
@@ -240,29 +361,28 @@ function estimateRides(route) {
 function renderResults() {
   $("#summaryPickup").textContent = currentRoute.pickup;
   $("#summaryDestination").textContent = currentRoute.destination;
-  $("#resultsMeta").textContent = `Distância calculada: ${formatDistance(currentRoute.distance)} · ${labelTime(currentRoute.time)} · dados beta`;
+  $("#summaryRoute").textContent = `${currentRoute.pickup} → ${currentRoute.destination}`;
+  $("#resultsMeta").textContent = `${formatDistance(currentRoute.distance)} · ${labelTime(currentRoute.time)} · estimativa beta`;
+  updateSortToggle();
 
   const list = $("#rideList");
   list.innerHTML = "";
 
-  currentResults.forEach((ride, i) => {
+  getSortedResults().forEach((ride, i) => {
+    const bestLabel = currentSort === "eta" ? "Mais próximo" : "Melhor preço";
     const card = document.createElement("article");
     card.className = `ride-card ${i === 0 ? "best" : ""}`;
     card.innerHTML = `
+      <img class="ride-logo" src="${escapeHtml(ride.logo)}" alt="" aria-hidden="true" loading="lazy">
       <div class="ride-main">
-        <div class="logo ${ride.id}">
-          <img src="${ride.logo}" alt="${ride.name}" loading="lazy">
+        <div class="ride-title">
+          <strong>${formatKz(ride.estimate)}</strong>
+          ${i === 0 ? `<span class="badge">${bestLabel}</span>` : ""}
         </div>
-        <div>
-          <div class="ride-title">
-            <strong>${ride.name}</strong>
-            ${i === 0 ? `<span class="badge">Mais barato</span>` : ""}
-          </div>
-          <div class="ride-sub">${ride.type} · ${ride.eta} min · ${ride.contributions} contribuições nesta rota</div>
-        </div>
+        <div class="ride-sub">${ride.name} · ${ride.type} · motorista chega em ${ride.eta} min · ${ride.contributions} contribuições</div>
       </div>
       <div class="ride-price">
-        <strong>${formatKz(ride.estimate)}</strong>
+        <strong>${ride.eta} min</strong>
         <span>${formatKz(ride.minRange)} a ${formatKz(ride.maxRange)}</span>
       </div>
     `;
@@ -279,6 +399,7 @@ function compareRoute(route) {
   currentResults = estimateRides(currentRoute);
   renderResults();
   addSearchHistory(currentRoute);
+  updateRouteMap(currentRoute);
   showView("resultsView");
 }
 
@@ -437,12 +558,14 @@ function setFieldLocation(fieldId, location, options = {}) {
   }
 
   updateDistanceDisplay();
+  updateRouteMap();
   return normalized;
 }
 
 function clearFieldLocation(fieldId) {
   fieldLocations[fieldId] = null;
   updateDistanceDisplay();
+  updateRouteMap();
 }
 
 function calculateDistanceKm(pointA, pointB) {
@@ -611,7 +734,9 @@ function getMapCenterForField(fieldId) {
 }
 
 function setPickerMarker(location) {
-  if (!pickerMap || !window.L || !isValidLocation(location)) return;
+  if (!isValidLocation(location)) return;
+
+  if (!pickerMap || !window.L) return;
 
   if (!pickerMarker) {
     pickerMarker = window.L.marker([location.lat, location.lng]).addTo(pickerMap);
@@ -694,8 +819,10 @@ async function openMapPicker(fieldId) {
   if (!isValidLocation(pendingMapLocation) && inputValue) {
     try {
       const location = await geocodeAddress(inputValue);
-      if (!location || activeMapFieldId !== fieldId || !pickerMap) return;
-      pickerMap.setView([location.lat, location.lng], 15);
+      if (!location || activeMapFieldId !== fieldId) return;
+      if (pickerMap) {
+        pickerMap.setView([location.lat, location.lng], 15);
+      }
     } catch {
       // Mantém o mapa no centro padrão se a busca pelo texto falhar.
     }
@@ -837,11 +964,17 @@ function initEvents() {
     btn.addEventListener("click", () => showView(btn.dataset.view));
   });
 
+  $$("[data-sort]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      currentSort = btn.dataset.sort || "price";
+      renderResults();
+    });
+  });
+
   $("#backToHome").addEventListener("click", () => showView("homeView"));
   $("#backToResults").addEventListener("click", () => showView("resultsView"));
   $("#cancelRedirect").addEventListener("click", () => showView("resultsView"));
 
-  $("#openContributeTop").addEventListener("click", openContributeDialog);
   $("#openContributeBottom").addEventListener("click", openContributeDialog);
   $("#closeContribute").addEventListener("click", () => $("#contributeDialog").close());
   $("#openPrivacy").addEventListener("click", () => $("#privacyDialog").showModal());
@@ -893,9 +1026,20 @@ function initEvents() {
     requestCurrentLocation({ force: true });
   });
 
-  $("#profileBtn").addEventListener("click", () => {
-    alert("Ainda não há opção para criar perfil.");
+  $(".brand").addEventListener("click", (event) => {
+    event.preventDefault();
+    showView("homeView");
   });
+
+  $("#profileBtn").addEventListener("click", () => {
+    const isOpen = $("#settingsView")?.classList.contains("active");
+    showView(isOpen ? "homeView" : "settingsView");
+  });
+
+  $("#openSettingsHelp")?.addEventListener("click", () => showSettingsPanel("help"));
+  $("#backSettingsMain")?.addEventListener("click", () => showSettingsPanel("main"));
+  $("#settingsOpenTerms")?.addEventListener("click", () => $("#termsDialog").showModal());
+  $("#settingsOpenPrivacy")?.addEventListener("click", () => $("#privacyDialog").showModal());
 }
 
 function seedDemoResults() {
@@ -916,11 +1060,11 @@ function seedDemoResults() {
 
 function initApp() {
   initLoadingScreen();
+  initMapBackground();
   initEvents();
   updateCurrentTimeDisplay();
   window.setInterval(updateCurrentTimeDisplay, 1000);
   updateDistanceDisplay();
-  seedDemoResults();
   requestCurrentLocation();
 }
 

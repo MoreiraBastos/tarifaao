@@ -23,3 +23,6 @@ dist/
 build/
 test-results/
 playwright-report/
+uber_design_system.md*
+porsche_design_system.md*
+tarifaao_design_system.md*

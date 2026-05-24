@@ -11,6 +11,8 @@ Este MVP está pronto para ser publicado como site estático. Não tem backend, 
 Principais entregas já implementadas:
 
 - Interface responsiva para mobile e desktop.
+- Novo fluxo visual baseado no `TARIFA.AO DESIGN SYSTEM`.
+- Home com mapa full-screen e pesquisa directa de origem/destino.
 - Loading screen inicial com marca Tarifa.ao.
 - Favicon e assets visuais da app.
 - Geolocalização automática para preencher a origem quando o utilizador autoriza.
@@ -22,7 +24,7 @@ Principais entregas já implementadas:
 - Hora actual em tempo real, sem input manual.
 - Distância calculada automaticamente pelos dois pontos.
 - Estimativas de tarifa por app, ordenadas do mais barato ao mais caro.
-- Rotas rápidas populares em Luanda.
+- Toggle para ordenar por menor preço ou por motorista mais próximo.
 - Histórico local de pesquisas via `localStorage`.
 - Envio de contribuições de preço real por WhatsApp.
 - Guardar contribuições localmente no dispositivo.
@@ -30,6 +32,7 @@ Principais entregas já implementadas:
 - Rodapé com autoria, copyright, disclaimer e atribuição OpenStreetMap.
 - Modais de Privacidade e Termos dentro do webapp.
 - Licença proprietária em `LICENSE.md`.
+- Documentação do design system em `tarifaao_design_system.md`.
 - Preparação para deploy na Vercel.
 
 ## Como funciona
@@ -42,7 +45,8 @@ Principais entregas já implementadas:
 6. A app calcula a distância real em linha recta entre os dois pontos.
 7. A hora usada é sempre a hora actual do dispositivo.
 8. A app calcula e apresenta estimativas de tarifas.
-9. O utilizador pode contribuir com preços reais por WhatsApp ou guardar localmente.
+9. O utilizador pode ordenar por preço ou por app com carro mais próximo.
+10. O utilizador pode contribuir com preços reais por WhatsApp ou guardar localmente.
 
 ## Estrutura
 
@@ -61,6 +65,7 @@ tarifaao/
 ├── LICENSE.md
 ├── README.md
 ├── styles.css
+├── tarifaao_design_system.md
 └── vercel.json
 ```
 
@@ -74,8 +79,8 @@ tarifaao/
 
 `styles.css`
 
-- Design system visual da app.
-- Layout mobile e desktop.
+- Tokens e fundações do Tarifa.ao Design System.
+- Layout mobile e desktop sobre mapa full-screen.
 - Transições suaves.
 - Loading screen.
 - Estados de botões, inputs, cards, modal e mapa.
@@ -99,6 +104,11 @@ tarifaao/
 
 - Licença proprietária do projecto.
 - Proíbe cópia, redistribuição, uso comercial e criação de derivados sem autorização escrita.
+
+`tarifaao_design_system.md`
+
+- Regista a fusão conceptual Uber Base + Porsche Design System aplicada ao Tarifa.ao.
+- Define princípios, tokens, componentes e regras de uso visual.
 
 ## Tecnologias
 
@@ -145,7 +155,13 @@ As apps, tarifas base, preço por quilómetro, disponibilidade e links ficam no 
 
 ### Rotas rápidas
 
-As rotas rápidas ficam no `index.html`, nos botões com classe `quick-route`.
+As rotas rápidas foram removidas da home para manter o fluxo inicial focado apenas em origem e destino.
+
+### Mapa
+
+O novo design usa mapa full-screen como superfície principal com Leaflet e tiles OpenStreetMap.
+
+Se o Leaflet ou a ligação aos tiles falhar, a app continua funcional com fallback visual em CSS. O selector "Definir no mapa" também usa Leaflet/OpenStreetMap.
 
 ## Publicação na Vercel
 
@@ -161,7 +177,7 @@ As rotas rápidas ficam no `index.html`, nos botões com classe `quick-route`.
 
 - A localização é pedida pelo navegador.
 - A localização não é enviada para um backend próprio, porque este MVP não tem backend.
-- O geocoding/reverse geocoding usa Nominatim/OpenStreetMap.
+- O geocoding/reverse geocoding pode usar serviços de mapa/geocoding configurados no frontend.
 - Histórico e contribuições locais ficam apenas no `localStorage` do dispositivo.
 - Ao enviar por WhatsApp, os dados são enviados para o número configurado em `OWNER_WHATSAPP`.
 - O webapp inclui um modal de Privacidade com estes pontos resumidos para o utilizador final.

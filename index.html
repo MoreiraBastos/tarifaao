@@ -4,16 +4,16 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Tarifa.ao | Comparador de táxis em Angola</title>
-  <meta name="description" content="Compare tarifas estimadas de apps de táxi em Angola e ajude a comunidade a validar preços reais." />
+  <meta name="description" content="Compare tarifas estimadas de apps de táxi em Angola antes de pedir uma viagem." />
   <meta name="author" content="Edson Moreira Bastos" />
   <meta name="copyright" content="Copyright 2026 Edson Moreira Bastos. Todos os direitos reservados." />
-  <meta name="theme-color" content="#0f62fe" />
+  <meta name="theme-color" content="#071a2f" />
   <link rel="icon" type="image/png" href="assets/favicon.png" />
   <link rel="apple-touch-icon" href="assets/favicon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://unpkg.com">
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link href="styles.css" rel="stylesheet" />
 </head>
@@ -24,190 +24,250 @@
     </div>
     <div class="loading-copy">
       <strong>Tarifa.ao</strong>
-      <span>A preparar a tua rota</span>
+      <span>A preparar comparação</span>
     </div>
     <div class="loading-track" aria-hidden="true">
       <span></span>
     </div>
   </div>
 
-  <header class="topbar">
-    <button class="icon-btn" id="locationBtn" aria-label="Usar localização actual">
-      <span class="dot"></span>
+  <div id="appMap" class="app-map" aria-label="Mapa de Luanda">
+    <div class="map-fallback-grid"></div>
+    <div class="map-fallback-road road-a"></div>
+    <div class="map-fallback-road road-b"></div>
+    <div class="map-fallback-road road-c"></div>
+    <div class="map-fallback-road road-d"></div>
+    <div class="map-fallback-pin pin-origin"></div>
+    <div class="map-fallback-pin pin-destination"></div>
+  </div>
+  <div class="map-scrim" aria-hidden="true"></div>
+
+  <header class="app-header">
+    <button class="map-control" id="locationBtn" aria-label="Usar localização actual">
+      <span class="target-icon"></span>
     </button>
     <a class="brand" href="#home" aria-label="Tarifa.ao">
       <img src="assets/favicon.png" alt="" class="brand-logo">
       <span>Tarifa.ao</span>
     </a>
-    <button class="icon-btn" id="profileBtn" aria-label="Perfil">
-      <span class="avatar"></span>
+    <button class="map-control" id="profileBtn" aria-label="Definições">
+      <span class="settings-glyph" aria-hidden="true">&#9881;</span>
     </button>
   </header>
 
-  <main>
-    <section id="homeView" class="view active">
-      <div class="map-bg" aria-hidden="true">
-        <div class="map-line line-1"></div>
-        <div class="map-line line-2"></div>
-        <div class="map-line line-3"></div>
-        <div class="map-node node-1"></div>
-        <div class="map-node node-2"></div>
-        <div class="map-node node-3"></div>
-      </div>
-
-      <div class="hero-panel">
-        <div class="eyebrow">Beta privado · Luanda</div>
-        <h1>Compara antes de pedir táxi.</h1>
-        <p>Coloca origem e destino. A comunidade ajuda a validar preços reais da Yango, Heetch, Kubinga, T'Leva e outras apps.</p>
-
-        <form id="routeForm" class="route-card">
-          <label>
-            <span>Origem</span>
+  <main class="app-shell">
+    <section id="homeView" class="view active home-view">
+      <form id="routeForm" class="search-panel">
+        <div class="route-fields">
+          <label class="location-field">
+            <span class="field-dot pickup"></span>
+            <span class="sr-only">Origem</span>
             <div class="location-input-wrap">
-              <input id="pickupInput" type="text" placeholder="Ex: Talatona, Belas Shopping" autocomplete="off" required />
-              <button class="map-option" type="button" data-map-target="pickupInput">Definir no mapa</button>
+              <input id="pickupInput" type="text" placeholder="Origem" autocomplete="off" required />
+              <button class="map-option" type="button" data-map-target="pickupInput">Definir origem no mapa</button>
             </div>
           </label>
 
-          <label>
-            <span>Destino</span>
+          <label class="location-field">
+            <span class="field-dot dropoff"></span>
+            <span class="sr-only">Destino</span>
             <div class="location-input-wrap">
-              <input id="destinationInput" type="text" placeholder="Ex: Mutamba, Kinaxixi" autocomplete="off" required />
-              <button class="map-option" type="button" data-map-target="destinationInput">Definir no mapa</button>
+              <input id="destinationInput" type="text" placeholder="Destino" autocomplete="off" required />
+              <button class="map-option" type="button" data-map-target="destinationInput">Definir destino no mapa</button>
             </div>
           </label>
-
-          <div class="form-row">
-            <div class="metric-box">
-              <span>Hora actual</span>
-              <strong id="currentTimeDisplay">--:--</strong>
-              <small id="timeBucketDisplay">agora</small>
-            </div>
-            <div class="metric-box">
-              <span>Distância calculada</span>
-              <strong id="distanceDisplay">-- km</strong>
-              <small>pelos dois pontos</small>
-            </div>
-          </div>
-
-          <button class="primary-btn" type="submit">Comparar tarifas</button>
-        </form>
-
-        <div class="quick-grid">
-          <button class="quick-route" data-pickup="Talatona" data-pickup-lat="-8.9155" data-pickup-lng="13.1828" data-destination="Mutamba" data-destination-lat="-8.8122" data-destination-lng="13.2348">
-            <strong>Talatona → Mutamba</strong>
-            <span>rota popular</span>
-          </button>
-          <button class="quick-route" data-pickup="Kilamba" data-pickup-lat="-8.9989" data-pickup-lng="13.2661" data-destination="Aeroporto 4 de Fevereiro" data-destination-lat="-8.8584" data-destination-lng="13.2312">
-            <strong>Kilamba → Aeroporto</strong>
-            <span>longa distância</span>
-          </button>
-          <button class="quick-route" data-pickup="Benfica" data-pickup-lat="-8.9892" data-pickup-lng="13.1882" data-destination="Ingombota" data-destination-lat="-8.8172" data-destination-lng="13.2363">
-            <strong>Benfica → Ingombota</strong>
-            <span>centro da cidade</span>
-          </button>
-          <button class="quick-route" data-pickup="Viana" data-pickup-lat="-8.9024" data-pickup-lng="13.3714" data-destination="Maianga" data-destination-lat="-8.8295" data-destination-lng="13.2428">
-            <strong>Viana → Maianga</strong>
-            <span>teste de pico</span>
-          </button>
         </div>
-      </div>
+
+        <div class="search-meta" aria-live="polite">
+          <span><strong id="currentTimeDisplay">--:--</strong> · <span id="timeBucketDisplay">agora</span></span>
+          <span id="distanceDisplay">-- km</span>
+        </div>
+
+        <button class="primary-btn" type="submit">Comparar preços</button>
+      </form>
     </section>
 
-    <section id="resultsView" class="view">
-      <div class="summary-card">
-        <button class="back-btn" id="backToHome">←</button>
-        <div class="route-summary">
-          <div class="route-point">
-            <span class="point pickup"></span>
-            <div>
-              <small>Origem</small>
-              <strong id="summaryPickup">—</strong>
-            </div>
-          </div>
-          <div class="route-point">
-            <span class="point dropoff"></span>
-            <div>
-              <small>Destino</small>
-              <strong id="summaryDestination">—</strong>
-            </div>
-          </div>
+    <section id="resultsView" class="view results-sheet" aria-label="Resultados da comparação">
+      <div class="sheet-handle" aria-hidden="true"></div>
+
+      <div class="sheet-topline">
+        <button class="back-btn" id="backToHome" aria-label="Voltar">←</button>
+        <div>
+          <small>Rota</small>
+          <strong id="summaryRoute">—</strong>
         </div>
       </div>
 
-      <div class="results-head">
+      <div class="results-toolbar">
         <div>
-          <h2>Tarifas estimadas</h2>
+          <h1>Comparação</h1>
           <p id="resultsMeta">Ordenado do mais barato ao mais caro.</p>
         </div>
-        <button class="ghost-btn" id="openContributeTop">Enviar preço real</button>
+        <div class="sort-toggle" role="group" aria-label="Ordenar resultados">
+          <button type="button" class="active" data-sort="price">Preço</button>
+          <button type="button" data-sort="eta">Mais próximo</button>
+        </div>
+      </div>
+
+      <div class="route-summary compact">
+        <div class="route-point">
+          <span class="point pickup"></span>
+          <div>
+            <small>Origem</small>
+            <strong id="summaryPickup">—</strong>
+          </div>
+        </div>
+        <div class="route-point">
+          <span class="point dropoff"></span>
+          <div>
+            <small>Destino</small>
+            <strong id="summaryDestination">—</strong>
+          </div>
+        </div>
       </div>
 
       <div id="rideList" class="ride-list"></div>
 
       <div class="crowd-card">
         <div>
-          <h3>Ajuda a melhorar o Tarifa.ao</h3>
-          <p>Vês um preço real numa app? Envia o valor. Nesta fase beta, o envio é por WhatsApp para validação manual.</p>
+          <h2>Preço real visto numa app?</h2>
+          <p>Envia a tua contribuição para melhorar as estimativas da comunidade.</p>
         </div>
-        <button class="secondary-btn" id="openContributeBottom">Contribuir preço</button>
+        <button class="secondary-btn" id="openContributeBottom">Contribuir</button>
       </div>
     </section>
 
-    <section id="redirectView" class="view">
-      <div class="redirect-card">
-        <button class="back-btn" id="backToResults">←</button>
-        <div class="loader-car">🚕</div>
-        <h2 id="redirectTitle">Abrir app</h2>
-        <p id="redirectText">Confirma antes de sair. O preço apresentado é uma estimativa da comunidade, não preço oficial.</p>
+    <section id="redirectView" class="view redirect-sheet">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <button class="back-btn" id="backToResults" aria-label="Voltar">←</button>
+      <div class="loader-car">Táxi</div>
+      <h1 id="redirectTitle">Abrir app</h1>
+      <p id="redirectText">Confirma antes de sair. A estimativa apresentada não é preço oficial.</p>
 
-        <div class="selected-ride">
+      <div class="selected-ride">
+        <div>
+          <small>App</small>
+          <strong id="selectedApp">—</strong>
+        </div>
+        <div>
+          <small>Estimativa</small>
+          <strong id="selectedPrice">—</strong>
+        </div>
+      </div>
+
+      <a id="openExternalLink" class="primary-btn link-btn" href="#" target="_blank" rel="noopener">Abrir app / site</a>
+      <button class="ghost-btn" id="cancelRedirect">Cancelar</button>
+    </section>
+
+    <section id="historyView" class="view simple-sheet">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <h1>Histórico local</h1>
+      <p>Dados guardados apenas neste dispositivo.</p>
+      <div id="historyList" class="history-list"></div>
+      <button class="ghost-btn" id="clearHistory">Limpar histórico</button>
+    </section>
+    <section id="settingsView" class="view settings-sheet" aria-label="Definições">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <div class="settings-panel settings-panel-main active" id="settingsMainPanel">
+        <div class="settings-profile">
+          <div class="profile-photo" aria-hidden="true">TB</div>
+          <small>Conta Tarifa.ao</small>
+          <strong>Ol&aacute;, Tiago</strong>
+          <button type="button" class="profile-link">Ver perfil</button>
+        </div>
+
+        <div class="settings-card">
+          <button type="button" class="settings-row">
+            <span class="settings-row-icon invite-icon" aria-hidden="true"></span>
+            <span>
+              <strong>Convidar amigos</strong>
+              <small>Partilha o Tarifa.ao com quem tamb&eacute;m compara viagens.</small>
+            </span>
+          </button>
+
+          <button type="button" class="settings-row" id="openSettingsHelp">
+            <span class="settings-row-icon help-icon" aria-hidden="true"></span>
+            <span>
+              <strong>Precisas de ajuda?</strong>
+              <small>Apoio, termos, privacidade e informa&ccedil;&otilde;es da app.</small>
+            </span>
+          </button>
+        </div>
+
+        <div class="settings-footer">
+          <button type="button" class="signout-btn">
+            <span class="signout-icon" aria-hidden="true"></span>
+            <span>Sair</span>
+          </button>
+          <small>v1.01 (beta)</small>
+        </div>
+      </div>
+
+      <div class="settings-panel settings-panel-help" id="settingsHelpPanel" aria-hidden="true">
+        <div class="settings-help-head">
+          <button type="button" class="back-btn" id="backSettingsMain" aria-label="Voltar">←</button>
           <div>
-            <small>App seleccionada</small>
-            <strong id="selectedApp">—</strong>
-          </div>
-          <div>
-            <small>Estimativa</small>
-            <strong id="selectedPrice">—</strong>
+            <small>Centro de ajuda</small>
+            <h1>Apoio ao cliente</h1>
           </div>
         </div>
 
-        <a id="openExternalLink" class="primary-btn link-btn" href="#" target="_blank" rel="noopener">Abrir app / site</a>
-        <button class="ghost-btn" id="cancelRedirect">Cancelar</button>
-      </div>
-    </section>
+        <div class="support-list">
+          <button type="button" class="support-item">
+            <span>
+              <strong>Apoio ao cliente</strong>
+              <small>Fala connosco sobre estimativas, rotas e contribui&ccedil;&otilde;es.</small>
+            </span>
+          </button>
+          <button type="button" class="support-item" id="settingsOpenTerms">
+            <span>
+              <strong>Termos de utiliza&ccedil;&atilde;o</strong>
+              <small>Regras de uso e limita&ccedil;&otilde;es do MVP.</small>
+            </span>
+          </button>
+          <button type="button" class="support-item" id="settingsOpenPrivacy">
+            <span>
+              <strong>Pol&iacute;tica de privacidade</strong>
+              <small>Como tratamos localiza&ccedil;&atilde;o, hist&oacute;rico e contribui&ccedil;&otilde;es.</small>
+            </span>
+          </button>
+        </div>
 
-    <section id="historyView" class="view">
-      <div class="simple-page">
-        <h2>Histórico local</h2>
-        <p>Dados guardados apenas neste dispositivo. Para recolha centralizada, liga isto a uma Google Sheet, Supabase ou backend simples.</p>
-        <div id="historyList" class="history-list"></div>
-        <button class="ghost-btn" id="clearHistory">Limpar histórico</button>
+        <small class="settings-version">v1.01 (beta)</small>
+      </div>
+
+      <div class="settings-profile">
+        <div class="profile-photo" aria-hidden="true">TB</div>
+        <strong>OlÃ¡, Tiago</strong>
+        <button type="button" class="profile-link">Ver perfil</button>
+      </div>
+
+      <div class="settings-actions">
+        <button type="button">Convidar amigos</button>
+        <button type="button">Precisas de ajuda?</button>
+      </div>
+
+      <div class="settings-footer">
+        <button type="button" class="signout-btn">
+          <span class="signout-icon" aria-hidden="true"></span>
+          <span>Sair</span>
+        </button>
+        <small>v1.01 (beta)</small>
       </div>
     </section>
   </main>
 
-  <footer class="app-footer">
-    <strong>App by Edson Moreira Bastos</strong>
-    <span>© 2026 Edson Moreira Bastos. Todos os direitos reservados.</span>
-    <span>Estimativas beta. Não afiliado à Yango, Heetch, Kubinga, T'Leva ou inDrive.</span>
-    <div class="footer-links">
-      <button type="button" id="openPrivacy">Privacidade</button>
-      <button type="button" id="openTerms">Termos</button>
-      <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a>
-    </div>
+  <footer class="legal-bar">
+    <span>© 2026 Edson Moreira Bastos</span>
+    <button type="button" id="openPrivacy">Privacidade</button>
+    <button type="button" id="openTerms">Termos</button>
+    <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>
   </footer>
-
-  <nav class="bottom-nav" aria-label="Navegação principal">
-    <button class="nav-item active" data-view="homeView">Início</button>
-    <button class="nav-item" data-view="resultsView">Comparar</button>
-    <button class="nav-item" data-view="historyView">Histórico</button>
-  </nav>
 
   <dialog id="contributeDialog" class="modal">
     <form id="contributeForm" method="dialog">
       <div class="modal-head">
-        <h3>Enviar preço real</h3>
+        <h2>Enviar preço real</h2>
         <button type="button" class="icon-close" id="closeContribute">×</button>
       </div>
 
@@ -235,7 +295,7 @@
 
       <label>
         <span>Observação</span>
-        <textarea id="contribNote" rows="3" placeholder="Ex: preço em hora de pico, chuva, pouca disponibilidade..."></textarea>
+        <textarea id="contribNote" rows="3" placeholder="Ex: hora de pico, chuva, pouca disponibilidade..."></textarea>
       </label>
 
       <button class="primary-btn" type="submit">Enviar por WhatsApp</button>
@@ -246,14 +306,14 @@
   <dialog id="privacyDialog" class="modal legal-modal">
     <div class="legal-panel">
       <div class="modal-head">
-        <h3>Privacidade</h3>
+        <h2>Privacidade</h2>
         <button type="button" class="icon-close" id="closePrivacy">×</button>
       </div>
 
       <div class="legal-copy">
         <p>O Tarifa.ao é um MVP sem backend próprio nesta versão.</p>
         <p>A localização é pedida pelo navegador apenas para preencher a origem e calcular a distância. Se não autorizares, a origem fica vazia.</p>
-        <p>Endereços e pontos escolhidos podem ser enviados ao Nominatim/OpenStreetMap para obter coordenadas ou nomes de locais.</p>
+        <p>Endereços e pontos escolhidos podem ser enviados a serviços de mapa e geocoding para obter coordenadas ou nomes de locais.</p>
         <p>Histórico e contribuições guardadas localmente ficam apenas neste dispositivo, através do armazenamento do navegador.</p>
         <p>Ao enviares uma contribuição por WhatsApp, os dados da rota, app, preço e observação são partilhados com o número configurado pelo Tarifa.ao.</p>
       </div>
@@ -263,7 +323,7 @@
   <dialog id="termsDialog" class="modal legal-modal">
     <div class="legal-panel">
       <div class="modal-head">
-        <h3>Termos</h3>
+        <h2>Termos</h2>
         <button type="button" class="icon-close" id="closeTerms">×</button>
       </div>
 
@@ -280,7 +340,7 @@
   <dialog id="mapDialog" class="modal map-modal">
     <div class="map-picker">
       <div class="modal-head">
-        <h3 id="mapDialogTitle">Definir no mapa</h3>
+        <h2 id="mapDialogTitle">Definir no mapa</h2>
         <button type="button" class="icon-close" id="closeMapDialog">×</button>
       </div>
 
