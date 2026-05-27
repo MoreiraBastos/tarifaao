@@ -10,6 +10,7 @@ yarn-error.log*
 # Environment files
 .env
 .env.*
+!.env.example
 
 # OS/editor noise
 .DS_Store

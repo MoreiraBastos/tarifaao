@@ -163,6 +163,42 @@ O novo design usa mapa full-screen como superfície principal com Leaflet e tile
 
 Se o Leaflet ou a ligação aos tiles falhar, a app continua funcional com fallback visual em CSS. O selector "Definir no mapa" também usa Leaflet/OpenStreetMap.
 
+### Supabase
+
+O MVP já está preparado para gravar dados comunitários no Supabase, sem login obrigatório.
+
+1. Abre o projecto no Supabase.
+2. Vai a `SQL Editor`.
+3. Executa o ficheiro `supabase/schema.sql`.
+4. Vai a `Settings > API Keys`.
+5. Copia a `Project URL`.
+6. Copia uma `Publishable key` ou a legacy `anon public key`.
+7. Coloca estes valores no `index.html`:
+
+```html
+<meta name="supabase-url" content="https://PROJECT_REF.supabase.co" />
+<meta name="supabase-publishable-key" content="sb_publishable_..." />
+```
+
+Alternativa avançada:
+
+```html
+<script>
+  window.TARIFAAO_SUPABASE_URL = "https://PROJECT_REF.supabase.co";
+  window.TARIFAAO_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_...";
+</script>
+```
+
+Nunca colocar no frontend: database password, secret key ou service role key.
+
+Tabelas criadas:
+
+- `route_searches`: pesquisas de origem/destino.
+- `fare_contributions`: contribuições reais de preço.
+- `user_feedback`: feedback futuro da comunidade.
+
+As tabelas têm RLS activo e permitem apenas `insert` para clientes públicos.
+
 ## Publicação na Vercel
 
 1. Cria ou importa o repositório no GitHub.
@@ -176,9 +212,9 @@ Se o Leaflet ou a ligação aos tiles falhar, a app continua funcional com fallb
 ## Privacidade
 
 - A localização é pedida pelo navegador.
-- A localização não é enviada para um backend próprio, porque este MVP não tem backend.
+- Quando Supabase estiver configurado, pesquisas e contribuições podem ser guardadas para melhorar estimativas comunitárias.
 - O geocoding/reverse geocoding pode usar serviços de mapa/geocoding configurados no frontend.
-- Histórico e contribuições locais ficam apenas no `localStorage` do dispositivo.
+- Histórico local fica no `localStorage` do dispositivo; contribuições também podem ser sincronizadas com Supabase.
 - Ao enviar por WhatsApp, os dados são enviados para o número configurado em `OWNER_WHATSAPP`.
 - O webapp inclui um modal de Privacidade com estes pontos resumidos para o utilizador final.
 
@@ -196,7 +232,7 @@ O app inclui avisos para o utilizador final:
 
 - A distância é calculada em linha recta entre dois pontos, não por estrada.
 - As tarifas são estimativas beta e não preços oficiais das apps.
-- Não há backend para validação centralizada das contribuições.
+- O backend Supabase é insert-only no cliente; validação/admin continuam como próximos passos.
 - O histórico é local e pode ser apagado pelo navegador.
 - O Nominatim pode limitar pedidos se houver muito tráfego.
 
@@ -213,7 +249,7 @@ O app inclui avisos para o utilizador final:
 ## Ideias de backend simples
 
 - Google Sheets via Apps Script.
-- Supabase.
+- Supabase com RLS insert-only.
 - Firebase.
 - Airtable.
 - API própria simples em Node/Express.

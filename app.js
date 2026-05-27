@@ -1,7 +1,14 @@
 const OWNER_WHATSAPP = "244963201382"; // Troca pelo teu número. Ex: 244921744420
 
+const APP_VERSION = "v1.01-beta";
 const LUANDA_CENTER = { lat: -8.839, lng: 13.2894, zoom: 12 };
 const NOMINATIM_BASE = "https://nominatim.openstreetmap.org";
+const SUPABASE_URL = document.querySelector('meta[name="supabase-url"]')?.content.trim() ||
+  window.TARIFAAO_SUPABASE_URL ||
+  "";
+const SUPABASE_PUBLISHABLE_KEY = document.querySelector('meta[name="supabase-publishable-key"]')?.content.trim() ||
+  window.TARIFAAO_SUPABASE_PUBLISHABLE_KEY ||
+  "";
 
 const APPS = [
   {
@@ -90,11 +97,16 @@ let backgroundRouteLine = null;
 let backgroundRouteMarkers = [];
 let pickerMap = null;
 let pickerMarker = null;
+let userCurrentLocation = null;
 let activeMapFieldId = null;
 let pendingMapLocation = null;
 let mapSelectionToken = 0;
+let suggestionTimer = null;
+let suggestionToken = 0;
+let activeSuggestionFieldId = null;
 
 const geocodeCache = new Map();
+const suggestionCache = new Map();
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
@@ -129,6 +141,16 @@ function initLoadingScreen() {
   }
 
   window.setTimeout(finish, fallbackMs);
+}
+
+function updatePrivacyCopy() {
+  const paragraphs = $$("#privacyDialog .legal-copy p");
+  if (paragraphs[0]) {
+    paragraphs[0].textContent = "O Tarifa.ao é um MVP com backend leve para melhorar estimativas comunitárias quando o Supabase estiver configurado.";
+  }
+  if (paragraphs[3]) {
+    paragraphs[3].textContent = "Histórico local fica neste dispositivo. Pesquisas e contribuições podem ser guardadas no Supabase para melhorar o serviço.";
+  }
 }
 
 function formatKz(value) {
@@ -178,6 +200,43 @@ function escapeHtml(value) {
     "\"": "&quot;",
     "'": "&#039;"
   }[char]));
+}
+
+function getDeviceId() {
+  const storageKey = "tarifaao_device_id";
+  let id = localStorage.getItem(storageKey);
+  if (id) return id;
+
+  id = crypto?.randomUUID?.() || `device_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  localStorage.setItem(storageKey, id);
+  return id;
+}
+
+function isSupabaseConfigured() {
+  return Boolean(SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY);
+}
+
+async function supabaseInsert(table, payload) {
+  if (!isSupabaseConfigured()) return;
+
+  try {
+    const response = await fetch(`${SUPABASE_URL.replace(/\/$/, "")}/rest/v1/${table}`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Supabase insert failed: ${response.status}`);
+    }
+  } catch (error) {
+    console.warn("Tarifa.ao Supabase sync skipped.", error);
+  }
 }
 
 function getCurrentTimeBucket(date = new Date()) {
@@ -391,6 +450,28 @@ function renderResults() {
   });
 }
 
+function renderResultsSkeleton(pickup, destination) {
+  $("#summaryPickup").textContent = pickup || "Origem";
+  $("#summaryDestination").textContent = destination || "Destino";
+  $("#summaryRoute").textContent = `${pickup || "Origem"} → ${destination || "Destino"}`;
+  $("#resultsMeta").textContent = "A calcular distância e estimativas...";
+
+  const list = $("#rideList");
+  list.innerHTML = Array.from({ length: 4 }).map(() => `
+    <article class="ride-card skeleton-card" aria-hidden="true">
+      <span class="skeleton-logo"></span>
+      <div class="ride-main">
+        <span class="skeleton-line strong"></span>
+        <span class="skeleton-line"></span>
+      </div>
+      <div class="ride-price">
+        <span class="skeleton-line price"></span>
+        <span class="skeleton-line tiny"></span>
+      </div>
+    </article>
+  `).join("");
+}
+
 function compareRoute(route) {
   currentRoute = {
     ...route,
@@ -399,6 +480,7 @@ function compareRoute(route) {
   currentResults = estimateRides(currentRoute);
   renderResults();
   addSearchHistory(currentRoute);
+  trackRouteSearch(currentRoute);
   updateRouteMap(currentRoute);
   showView("resultsView");
 }
@@ -428,6 +510,49 @@ function saveContribution(item) {
   const data = getContributions();
   data.unshift(item);
   localStorage.setItem("tarifaao_contributions", JSON.stringify(data.slice(0, 200)));
+}
+
+function saveContributionAndSync(item, source = "local") {
+  saveContribution(item);
+  trackFareContribution(item, source);
+}
+
+function trackFareContribution(item, source = "local") {
+  supabaseInsert("fare_contributions", {
+    device_id: getDeviceId(),
+    app_version: APP_VERSION,
+    route_key: item.routeKey,
+    app_name: item.app,
+    pickup_label: item.pickup,
+    destination_label: item.destination,
+    distance_km: Number(item.distance) || null,
+    time_bucket: item.time,
+    price_kz: item.price,
+    eta_text: item.eta || null,
+    note: item.note || null,
+    source
+  });
+}
+
+function trackRouteSearch(route) {
+  const pickupLocation = route.pickupLocation || {};
+  const destinationLocation = route.destinationLocation || {};
+
+  supabaseInsert("route_searches", {
+    device_id: getDeviceId(),
+    app_version: APP_VERSION,
+    pickup_label: route.pickup,
+    destination_label: route.destination,
+    pickup_lat: Number.isFinite(Number(pickupLocation.lat)) ? Number(pickupLocation.lat) : null,
+    pickup_lng: Number.isFinite(Number(pickupLocation.lng)) ? Number(pickupLocation.lng) : null,
+    destination_lat: Number.isFinite(Number(destinationLocation.lat)) ? Number(destinationLocation.lat) : null,
+    destination_lng: Number.isFinite(Number(destinationLocation.lng)) ? Number(destinationLocation.lng) : null,
+    distance_km: Number(route.distance) || null,
+    time_bucket: route.time,
+    sort_mode: currentSort,
+    results_count: currentResults.length,
+    source: "web_mvp"
+  });
 }
 
 function addSearchHistory(route) {
@@ -557,6 +682,7 @@ function setFieldLocation(fieldId, location, options = {}) {
     updateMapOption(input);
   }
 
+  if (activeSuggestionFieldId === fieldId) hideAddressSuggestions();
   updateDistanceDisplay();
   updateRouteMap();
   return normalized;
@@ -677,6 +803,155 @@ async function geocodeAddress(query) {
   return location;
 }
 
+async function geocodeSuggestions(query) {
+  const cleanQuery = query.trim();
+  if (cleanQuery.length < 2) return [];
+
+  const cacheKey = cleanQuery.toLowerCase();
+  if (suggestionCache.has(cacheKey)) {
+    return sortSuggestionsByUserDistance(suggestionCache.get(cacheKey));
+  }
+
+  const url = `${NOMINATIM_BASE}/search?format=jsonv2&limit=5&countrycodes=ao&addressdetails=1&q=${encodeURIComponent(cleanQuery)}`;
+  const data = await fetchJson(url);
+  const suggestions = Array.isArray(data)
+    ? data
+        .map(item => ({
+          ...toLocation(formatNominatimAddress(item) || cleanQuery, item.lat, item.lon),
+          detail: shortenDisplayName(item.display_name)
+        }))
+        .filter(isValidLocation)
+    : [];
+
+  suggestionCache.set(cacheKey, suggestions);
+  return sortSuggestionsByUserDistance(suggestions);
+}
+
+function getSuggestionDistance(location) {
+  if (!isValidLocation(userCurrentLocation) || !isValidLocation(location)) return null;
+  return calculateDistanceKm(userCurrentLocation, location);
+}
+
+function sortSuggestionsByUserDistance(suggestions) {
+  return [...suggestions]
+    .map(item => ({
+      ...item,
+      distanceFromUser: getSuggestionDistance(item)
+    }))
+    .sort((a, b) => {
+      const distanceA = Number.isFinite(a.distanceFromUser) ? a.distanceFromUser : Number.POSITIVE_INFINITY;
+      const distanceB = Number.isFinite(b.distanceFromUser) ? b.distanceFromUser : Number.POSITIVE_INFINITY;
+      return distanceA - distanceB;
+    });
+}
+
+function formatSuggestionDetail(item) {
+  if (Number.isFinite(item.distanceFromUser)) {
+    return `${formatDistance(item.distanceFromUser)} de ti · ${item.detail || "Angola"}`;
+  }
+
+  return item.detail || "Angola";
+}
+
+function getFieldLabel(fieldId) {
+  return fieldId === "pickupInput" ? "origem" : "destino";
+}
+
+function hideAddressSuggestions() {
+  const panel = $("#addressSuggestions");
+  if (!panel) return;
+  window.clearTimeout(suggestionTimer);
+  suggestionToken += 1;
+  panel.hidden = true;
+  panel.classList.remove("loading");
+  panel.innerHTML = "";
+  activeSuggestionFieldId = null;
+}
+
+function renderSuggestionSkeleton(fieldId) {
+  const panel = $("#addressSuggestions");
+  if (!panel) return;
+
+  activeSuggestionFieldId = fieldId;
+  panel.hidden = false;
+  panel.classList.add("loading");
+  panel.innerHTML = `
+    <div class="suggestions-title">A procurar ${getFieldLabel(fieldId)}</div>
+    <div class="suggestion-skeleton"></div>
+    <div class="suggestion-skeleton short"></div>
+    <div class="suggestion-skeleton"></div>
+  `;
+}
+
+function renderAddressSuggestions(fieldId, suggestions) {
+  const panel = $("#addressSuggestions");
+  if (!panel || activeSuggestionFieldId !== fieldId) return;
+
+  panel.hidden = false;
+  panel.classList.remove("loading");
+
+  if (!suggestions.length) {
+    panel.innerHTML = `
+      <div class="suggestions-title">Sem resultados rápidos</div>
+      <p>Continua a escrever ou define o ponto no mapa.</p>
+    `;
+    return;
+  }
+
+  panel.innerHTML = `
+    <div class="suggestions-title">Sugestões para ${getFieldLabel(fieldId)}</div>
+    <div class="suggestions-list">
+      ${suggestions.map((item, index) => `
+        <button type="button" class="suggestion-item" data-index="${index}">
+          <span class="suggestion-pin"></span>
+          <span>
+            <strong>${escapeHtml(item.label)}</strong>
+            <small>${escapeHtml(formatSuggestionDetail(item))}</small>
+          </span>
+        </button>
+      `).join("")}
+    </div>
+  `;
+
+  panel.querySelectorAll(".suggestion-item").forEach(button => {
+    button.addEventListener("click", () => {
+      const location = suggestions[Number(button.dataset.index)];
+      setFieldLocation(fieldId, location);
+      hideAddressSuggestions();
+
+      const nextField = fieldId === "pickupInput" ? $("#destinationInput") : null;
+      if (nextField && !nextField.value.trim()) nextField.focus();
+    });
+  });
+}
+
+function queueAddressSuggestions(fieldId) {
+  const input = document.getElementById(fieldId);
+  const query = input?.value.trim() || "";
+
+  window.clearTimeout(suggestionTimer);
+
+  if (query.length < 2) {
+    hideAddressSuggestions();
+    return;
+  }
+
+  const token = ++suggestionToken;
+  activeSuggestionFieldId = fieldId;
+
+  suggestionTimer = window.setTimeout(async () => {
+    renderSuggestionSkeleton(fieldId);
+    try {
+      const suggestions = await geocodeSuggestions(query);
+      if (token !== suggestionToken || activeSuggestionFieldId !== fieldId) return;
+      renderAddressSuggestions(fieldId, suggestions);
+    } catch {
+      if (token !== suggestionToken || activeSuggestionFieldId !== fieldId) return;
+      renderAddressSuggestions(fieldId, []);
+    }
+  }, 260);
+}
+
 async function resolveLocationFromInput(fieldId) {
   const input = document.getElementById(fieldId);
   const typedValue = input?.value.trim();
@@ -715,9 +990,16 @@ function initLocationField(fieldId) {
     delete input.dataset.autofilledLocation;
     clearFieldLocation(fieldId);
     updateMapOption(input);
+    queueAddressSuggestions(fieldId);
   });
 
-  input.addEventListener("focus", () => updateMapOption(input));
+  input.addEventListener("focus", () => {
+    updateMapOption(input);
+    queueAddressSuggestions(fieldId);
+  });
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") hideAddressSuggestions();
+  });
   input.addEventListener("blur", () => {
     window.setTimeout(() => updateMapOption(input), 140);
   });
@@ -847,6 +1129,7 @@ function requestCurrentLocation(options = {}) {
   navigator.geolocation.getCurrentPosition(async (position) => {
     const { latitude, longitude } = position.coords;
     const fallbackLocation = toLocation(formatFallbackAddress(latitude, longitude), latitude, longitude);
+    userCurrentLocation = fallbackLocation;
 
     if (!options.force && input.value.trim() && input.dataset.autofilledLocation !== "true") {
       input.placeholder = placeholder;
@@ -857,6 +1140,7 @@ function requestCurrentLocation(options = {}) {
 
     try {
       const resolvedLocation = await reverseGeocode(latitude, longitude);
+      userCurrentLocation = resolvedLocation;
       if (!options.force && input.value.trim() && input.dataset.autofilledLocation !== "true") return;
       setFieldLocation("pickupInput", resolvedLocation, { autofill: true });
     } catch {
@@ -868,6 +1152,7 @@ function requestCurrentLocation(options = {}) {
     const shouldClearInput = !input.value.trim() || input.dataset.autofilledLocation === "true";
 
     clearFieldLocation("pickupInput");
+    userCurrentLocation = null;
     if (shouldClearInput) input.value = "";
     input.placeholder = placeholder;
   }, {
@@ -913,8 +1198,11 @@ async function submitRouteForm(event) {
 
   if (!pickup || !destination) return;
 
+  hideAddressSuggestions();
   submitButton.disabled = true;
   submitButton.textContent = "A calcular...";
+  renderResultsSkeleton(pickup, destination);
+  showView("resultsView");
 
   try {
     const pickupLocation = await resolveLocationFromInput("pickupInput");
@@ -922,6 +1210,7 @@ async function submitRouteForm(event) {
     const distance = calculateDistanceKm(pickupLocation, destinationLocation);
 
     if (!distance) {
+      showView("homeView");
       alert("Não consegui calcular a distância desta rota. Define a origem e o destino no mapa.");
       return;
     }
@@ -937,6 +1226,7 @@ async function submitRouteForm(event) {
       destinationLocation
     });
   } catch {
+    showView("homeView");
     alert("Não consegui calcular a distância desta rota. Define a origem e o destino no mapa.");
   } finally {
     submitButton.disabled = false;
@@ -949,6 +1239,9 @@ function initEvents() {
   initLocationField("destinationInput");
 
   $("#routeForm").addEventListener("submit", submitRouteForm);
+  document.addEventListener("pointerdown", (event) => {
+    if (!event.target.closest(".search-panel")) hideAddressSuggestions();
+  });
 
   $$(".map-option").forEach(btn => {
     btn.tabIndex = -1;
@@ -989,7 +1282,7 @@ function initEvents() {
     const item = buildContribution();
     if (!item) return;
 
-    saveContribution(item);
+    saveContributionAndSync(item, "whatsapp");
     sendContributionWhatsApp(item);
     resetContributionForm();
     $("#contributeDialog").close();
@@ -1004,7 +1297,7 @@ function initEvents() {
     const item = buildContribution();
     if (!item) return;
 
-    saveContribution(item);
+    saveContributionAndSync(item, "local_only");
     resetContributionForm();
     $("#contributeDialog").close();
 
@@ -1060,6 +1353,7 @@ function seedDemoResults() {
 
 function initApp() {
   initLoadingScreen();
+  updatePrivacyCopy();
   initMapBackground();
   initEvents();
   updateCurrentTimeDisplay();
