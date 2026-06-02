@@ -111,6 +111,17 @@ const suggestionCache = new Map();
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 
+let toastTimer = null;
+
+function showToast(message, duration = 2800) {
+  const toast = $("#toast");
+  if (!toast) return;
+  clearTimeout(toastTimer);
+  toast.textContent = message;
+  toast.classList.add("visible");
+  toastTimer = setTimeout(() => toast.classList.remove("visible"), duration);
+}
+
 function initLoadingScreen() {
   const loadingScreen = $("#loadingScreen");
   if (!loadingScreen) return;
@@ -429,20 +440,21 @@ function renderResults() {
 
   getSortedResults().forEach((ride, i) => {
     const bestLabel = currentSort === "eta" ? "Mais próximo" : "Melhor preço";
+    const contrib = ride.contributions ? `${ride.contributions} contrib.` : "base";
     const card = document.createElement("article");
     card.className = `ride-card ${i === 0 ? "best" : ""}`;
     card.innerHTML = `
-      <img class="ride-logo" src="${escapeHtml(ride.logo)}" alt="" aria-hidden="true" loading="lazy">
+      <img class="ride-logo" src="${escapeHtml(ride.logo)}" alt="${escapeHtml(ride.name)}" loading="lazy">
       <div class="ride-main">
         <div class="ride-title">
-          <strong>${formatKz(ride.estimate)}</strong>
+          <strong>${escapeHtml(ride.name)}</strong>
           ${i === 0 ? `<span class="badge">${bestLabel}</span>` : ""}
         </div>
-        <div class="ride-sub">${ride.name} · ${ride.type} · motorista chega em ${ride.eta} min · ${ride.contributions} contribuições</div>
+        <div class="ride-sub">${escapeHtml(ride.type)} · ${ride.eta} min · ${contrib}</div>
       </div>
       <div class="ride-price">
-        <strong>${ride.eta} min</strong>
-        <span>${formatKz(ride.minRange)} a ${formatKz(ride.maxRange)}</span>
+        <strong>${formatKz(ride.estimate)}</strong>
+        <span>${formatKz(ride.minRange)}–${formatKz(ride.maxRange)}</span>
       </div>
     `;
     card.addEventListener("click", () => selectRide(ride));
@@ -602,7 +614,7 @@ function buildContribution() {
   const time = currentRoute.time || liveTimeBucket;
 
   if (!price) {
-    alert("Coloca um preço válido. Não vamos treinar o algoritmo com poesia.");
+    showToast("Coloca um preço válido para continuar.");
     return null;
   }
 
@@ -1211,7 +1223,7 @@ async function submitRouteForm(event) {
 
     if (!distance) {
       showView("homeView");
-      alert("Não consegui calcular a distância desta rota. Define a origem e o destino no mapa.");
+      showToast("Não consegui calcular a distância. Define os pontos no mapa.");
       return;
     }
 
@@ -1261,6 +1273,7 @@ function initEvents() {
     btn.addEventListener("click", () => {
       currentSort = btn.dataset.sort || "price";
       renderResults();
+      $("#rideList")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     });
   });
 
@@ -1306,7 +1319,7 @@ function initEvents() {
       renderResults();
     }
 
-    alert("Guardado localmente neste dispositivo.");
+    showToast("Guardado neste dispositivo.");
   });
 
   $("#clearHistory").addEventListener("click", () => {
@@ -1333,6 +1346,53 @@ function initEvents() {
   $("#backSettingsMain")?.addEventListener("click", () => showSettingsPanel("main"));
   $("#settingsOpenTerms")?.addEventListener("click", () => $("#termsDialog").showModal());
   $("#settingsOpenPrivacy")?.addEventListener("click", () => $("#privacyDialog").showModal());
+
+  $("#swapFields")?.addEventListener("click", () => {
+    const pickupInput = $("#pickupInput");
+    const destInput = $("#destinationInput");
+    const pickupVal = pickupInput.value;
+    const destVal = destInput.value;
+    const pickupLoc = fieldLocations.pickupInput;
+    const destLoc = fieldLocations.destinationInput;
+
+    pickupInput.value = destVal;
+    destInput.value = pickupVal;
+    fieldLocations.pickupInput = destLoc;
+    fieldLocations.destinationInput = pickupLoc;
+
+    updateDistanceDisplay();
+    updateRouteMap();
+  });
+
+  $("#inviteBtn")?.addEventListener("click", async () => {
+    const shareData = {
+      title: "Tarifa.ao",
+      text: "Compara tarifas de táxi em Angola antes de pedir uma viagem.",
+      url: window.location.href
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        showToast("Link copiado!");
+      }
+    } catch {
+      // Utilizador cancelou o share
+    }
+  });
+
+  $$(".signout-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      showToast("Conta não necessária nesta versão beta.");
+    });
+  });
+
+  $$(".profile-link").forEach(btn => {
+    btn.addEventListener("click", () => {
+      showToast("Perfil de utilizador disponível em breve.");
+    });
+  });
 }
 
 function seedDemoResults() {

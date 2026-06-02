@@ -27,8 +27,10 @@
   --tao-space-4: 16px;
   --tao-space-5: 24px;
   --tao-space-6: 32px;
-  --tao-motion-fast: 200ms cubic-bezier(.2,0,0,1);
-  --tao-motion: 260ms cubic-bezier(.2,0,0,1);
+  --tao-motion-fast: 250ms cubic-bezier(.2,0,0,1);
+  --tao-motion: 320ms cubic-bezier(.2,0,0,1);
+  --tao-motion-decel: 380ms cubic-bezier(.05,.7,.1,1);
+  --tao-motion-spring: 400ms cubic-bezier(.34,1.15,.64,1);
 }
 
 * {
@@ -63,6 +65,8 @@ textarea {
 
 button {
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 a,
@@ -98,7 +102,8 @@ textarea:focus-visible {
 }
 
 button:active {
-  transform: translateY(1px);
+  transform: scale(.96);
+  opacity: .82;
 }
 
 button:disabled {
@@ -303,11 +308,13 @@ body.leaflet-map-ready .map-fallback-pin {
   top: 0;
   inset-inline: 0;
   z-index: 40;
-  height: 68px;
+  height: calc(68px + env(safe-area-inset-top, 0px));
   display: grid;
   grid-template-columns: 52px 1fr 52px;
-  align-items: center;
-  padding: 10px 14px;
+  align-items: end;
+  padding-inline: 14px;
+  padding-bottom: 10px;
+  padding-top: max(10px, env(safe-area-inset-top, 10px));
   pointer-events: none;
 }
 
@@ -411,13 +418,13 @@ body.leaflet-map-ready .map-fallback-pin {
 }
 
 @keyframes view-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .home-view {
   min-height: 100dvh;
-  padding: 88px 16px 96px;
+  padding: calc(88px + env(safe-area-inset-top, 0px)) 16px 96px;
 }
 
 .search-panel {
@@ -450,6 +457,7 @@ body.leaflet-map-ready .map-fallback-pin {
 }
 
 .route-fields {
+  position: relative;
   display: grid;
   gap: 1px;
   background: var(--tao-line);
@@ -721,6 +729,7 @@ textarea {
 .redirect-sheet,
 .simple-sheet,
 .settings-sheet {
+  --sheet-tx: -50%;
   position: fixed;
   z-index: 24;
   left: 50%;
@@ -728,6 +737,9 @@ textarea {
   width: min(100% - 24px, 720px);
   max-height: calc(100dvh - 96px);
   overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
   pointer-events: auto;
   background: var(--tao-surface);
   border: 1px solid rgba(255,255,255,.86);
@@ -736,6 +748,24 @@ textarea {
   backdrop-filter: blur(22px);
   transform: translateX(-50%);
   padding: 14px;
+  will-change: transform, opacity;
+}
+
+.results-sheet.active,
+.redirect-sheet.active,
+.simple-sheet.active {
+  animation: sheet-enter var(--tao-motion-decel) both;
+}
+
+@keyframes sheet-enter {
+  from {
+    opacity: 0;
+    transform: translateX(var(--sheet-tx)) translateY(26px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(var(--sheet-tx)) translateY(0);
+  }
 }
 
 .sheet-handle {
@@ -784,12 +814,14 @@ textarea {
 .icon-close {
   width: 42px;
   height: 42px;
+  flex-shrink: 0;
   border: 0;
+  border-radius: 50%;
   display: grid;
   place-items: center;
   background: var(--tao-elevated);
   color: var(--tao-black);
-  font-size: 22px;
+  font-size: 20px;
 }
 
 .results-toolbar {
@@ -960,8 +992,8 @@ p {
 }
 
 .ride-title strong {
-  font-size: 17px;
-  letter-spacing: -.015em;
+  font-size: 15px;
+  letter-spacing: -.01em;
 }
 
 .badge {
@@ -984,19 +1016,22 @@ p {
 }
 
 .ride-price {
-  min-width: 118px;
+  min-width: 86px;
   text-align: right;
 }
 
 .ride-price strong {
   display: block;
-  font-size: 20px;
-  letter-spacing: -.035em;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -.04em;
+  color: var(--tao-black);
 }
 
 .ride-price span {
   color: var(--tao-ink-soft);
-  font-size: 12px;
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 .crowd-card {
@@ -1023,6 +1058,7 @@ p {
 .settings-sheet.active {
   display: flex;
   flex-direction: column;
+  animation: sheet-enter var(--tao-motion-decel) both;
 }
 
 .settings-sheet {
@@ -1386,6 +1422,75 @@ p {
   color: var(--tao-ink-soft);
 }
 
+/* Input focus highlight */
+.location-field:focus-within {
+  background: rgba(255,255,255,.98);
+  outline: 1px solid rgba(18,103,177,.28);
+  outline-offset: -1px;
+}
+
+/* Swap origin/destination button */
+.swap-btn {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  z-index: 2;
+  border: 1px solid var(--tao-line);
+  border-radius: 50%;
+  background: var(--tao-white);
+  color: var(--tao-black);
+  font-size: 15px;
+  display: grid;
+  place-items: center;
+  box-shadow: var(--tao-shadow-sm);
+  transition: background var(--tao-motion-fast), box-shadow var(--tao-motion-fast), transform var(--tao-motion-fast);
+}
+
+.swap-btn:hover {
+  background: var(--tao-elevated);
+  box-shadow: var(--tao-shadow-md);
+}
+
+.swap-btn:active {
+  transform: translateY(-50%) scale(.9) rotate(180deg);
+  opacity: 1;
+}
+
+/* Toast notification */
+.toast {
+  position: fixed;
+  z-index: 200;
+  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  width: max-content;
+  max-width: calc(100vw - 40px);
+  padding: 13px 20px;
+  background: var(--tao-black);
+  color: var(--tao-white);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -.01em;
+  border-radius: var(--tao-radius-md);
+  box-shadow: var(--tao-shadow-md);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-50%) translateY(10px);
+  transition:
+    opacity var(--tao-motion-fast),
+    transform var(--tao-motion-fast),
+    visibility var(--tao-motion-fast);
+}
+
+.toast.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
 .legal-bar {
   position: fixed;
   z-index: 35;
@@ -1430,7 +1535,7 @@ p {
 }
 
 .modal[open] {
-  animation: dialog-in var(--tao-motion) both;
+  animation: dialog-in var(--tao-motion-spring) both;
 }
 
 .modal::backdrop {
@@ -1440,8 +1545,8 @@ p {
 }
 
 @keyframes dialog-in {
-  from { opacity: 0; transform: translateY(12px) scale(.985); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0; transform: translateY(20px) scale(.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @keyframes backdrop-in {
@@ -1586,6 +1691,7 @@ p {
   .redirect-sheet,
   .simple-sheet,
   .settings-sheet {
+    --sheet-tx: 0px;
     left: auto;
     right: 28px;
     bottom: 28px;
@@ -1601,7 +1707,6 @@ p {
 
 @media (max-width: 560px) {
   .app-header {
-    height: 64px;
     grid-template-columns: 46px 1fr 46px;
     padding-inline: 10px;
   }
@@ -1616,7 +1721,7 @@ p {
   }
 
   .home-view {
-    padding: 78px 10px 92px;
+    padding: calc(80px + env(safe-area-inset-top, 0px)) 10px 92px;
   }
 
   .search-panel {
@@ -1627,8 +1732,9 @@ p {
   .redirect-sheet,
   .simple-sheet,
   .settings-sheet {
+    --sheet-tx: 0px;
     width: 100%;
-    max-height: calc(100dvh - 74px);
+    max-height: calc(100dvh - 72px);
     left: 0;
     right: 0;
     bottom: 0;
@@ -1636,11 +1742,28 @@ p {
     border-left: 0;
     border-right: 0;
     border-bottom: 0;
-    padding-bottom: 28px;
+    border-radius: var(--tao-radius-lg) var(--tao-radius-lg) 0 0;
+    padding-bottom: max(28px, env(safe-area-inset-bottom, 28px));
   }
 
   .settings-sheet {
-    min-height: calc(100dvh - 74px);
+    min-height: calc(100dvh - 72px);
+  }
+
+  .results-toolbar h1,
+  .redirect-sheet h1,
+  .simple-sheet h1 {
+    font-size: 22px;
+  }
+
+  .route-summary.compact {
+    padding: 10px;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .sheet-topline {
+    margin-bottom: 12px;
   }
 
   .settings-actions {
@@ -1653,13 +1776,16 @@ p {
   }
 
   .ride-card {
-    grid-template-columns: 38px minmax(0, 1fr);
+    gap: 10px;
+    padding: 12px;
   }
 
   .ride-price {
-    grid-column: 2;
-    min-width: 0;
-    text-align: left;
+    min-width: 76px;
+  }
+
+  .ride-price strong {
+    font-size: 17px;
   }
 
   .selected-ride > div:first-child {
@@ -1669,7 +1795,7 @@ p {
 
   .legal-bar {
     bottom: 6px;
-    opacity: .78;
+    opacity: .72;
   }
 }
 

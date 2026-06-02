@@ -2,7 +2,7 @@
 <html lang="pt-AO">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Tarifa.ao | Comparador de táxis em Angola</title>
   <meta name="description" content="Compare tarifas estimadas de apps de táxi em Angola antes de pedir uma viagem." />
   <meta name="author" content="Edson Moreira Bastos" />
@@ -78,6 +78,8 @@
               <button class="map-option" type="button" data-map-target="destinationInput">Definir destino no mapa</button>
             </div>
           </label>
+
+          <button type="button" class="swap-btn" id="swapFields" aria-label="Trocar origem e destino">⇅</button>
         </div>
 
         <div id="addressSuggestions" class="address-suggestions" aria-live="polite" hidden></div>
@@ -181,7 +183,7 @@
         </div>
 
         <div class="settings-card">
-          <button type="button" class="settings-row">
+          <button type="button" class="settings-row" id="inviteBtn">
             <span class="settings-row-icon invite-icon" aria-hidden="true"></span>
             <span>
               <strong>Convidar amigos</strong>
@@ -240,24 +242,6 @@
         <small class="settings-version">v1.01 (beta)</small>
       </div>
 
-      <div class="settings-profile">
-        <div class="profile-photo" aria-hidden="true">TB</div>
-        <strong>OlÃ¡, Tiago</strong>
-        <button type="button" class="profile-link">Ver perfil</button>
-      </div>
-
-      <div class="settings-actions">
-        <button type="button">Convidar amigos</button>
-        <button type="button">Precisas de ajuda?</button>
-      </div>
-
-      <div class="settings-footer">
-        <button type="button" class="signout-btn">
-          <span class="signout-icon" aria-hidden="true"></span>
-          <span>Sair</span>
-        </button>
-        <small>v1.01 (beta)</small>
-      </div>
     </section>
   </main>
 
@@ -359,6 +343,8 @@
       </div>
     </div>
   </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="app.js"></script>
