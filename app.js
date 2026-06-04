@@ -1,4 +1,4 @@
-const OWNER_WHATSAPP = "244963201382"; // Troca pelo teu número. Ex: 244921744420
+const OWNER_WHATSAPP = "351963201382"; // Troca pelo teu número. Ex: 244921744420
 
 const APP_VERSION = "v1.01-beta";
 const LUANDA_CENTER = { lat: -8.839, lng: 13.2894, zoom: 12 };
