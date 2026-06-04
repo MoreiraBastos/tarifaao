@@ -104,6 +104,7 @@ let mapSelectionToken = 0;
 let suggestionTimer = null;
 let suggestionToken = 0;
 let activeSuggestionFieldId = null;
+let registrationModalShownThisSession = false;
 
 const geocodeCache = new Map();
 const suggestionCache = new Map();
@@ -223,6 +224,83 @@ function getDeviceId() {
   return id;
 }
 
+function getVisitor() {
+  try {
+    const stored = JSON.parse(localStorage.getItem("tarifaao_visitor") || "null");
+    if (stored && stored.id) return stored;
+  } catch {}
+  return { id: getDeviceId(), isRegistered: false };
+}
+
+function saveVisitor(data) {
+  localStorage.setItem("tarifaao_visitor", JSON.stringify(data));
+}
+
+async function registerVisitor(email, firstName, lastName) {
+  const id = getDeviceId();
+  const visitor = {
+    id,
+    email: email.trim().toLowerCase(),
+    firstName: firstName.trim(),
+    lastName: (lastName || "").trim(),
+    isRegistered: true,
+    registeredAt: new Date().toISOString()
+  };
+
+  saveVisitor(visitor);
+  updateSettingsProfile();
+
+  await supabaseUpsert("visitors", {
+    id,
+    email: visitor.email,
+    first_name: visitor.firstName,
+    last_name: visitor.lastName || null,
+    device_id: id,
+    app_version: APP_VERSION
+  });
+
+  return visitor;
+}
+
+function shouldShowRegistrationModal() {
+  if (registrationModalShownThisSession) return false;
+  const visitor = getVisitor();
+  if (visitor.isRegistered) return false;
+
+  const dismissed = localStorage.getItem("tarifaao_reg_dismissed");
+  if (dismissed) {
+    const sevenDays = 7 * 24 * 60 * 60 * 1000;
+    if (Date.now() - parseInt(dismissed, 10) < sevenDays) return false;
+  }
+
+  return true;
+}
+
+function updateSettingsProfile() {
+  const visitor = getVisitor();
+  const photoEl = $("#settingsProfilePhoto");
+  const nameEl = $("#settingsProfileName");
+  const linkBtn = $("#profileLinkBtn");
+
+  if (photoEl) {
+    if (visitor.isRegistered) {
+      const initials = [visitor.firstName?.[0], visitor.lastName?.[0]]
+        .filter(Boolean).join("").toUpperCase() || "TB";
+      photoEl.textContent = initials;
+    } else {
+      photoEl.textContent = "?";
+    }
+  }
+
+  if (nameEl) {
+    nameEl.textContent = visitor.isRegistered ? `Olá, ${visitor.firstName}` : "Visitante";
+  }
+
+  if (linkBtn) {
+    linkBtn.textContent = visitor.isRegistered ? "Editar perfil" : "Registar";
+  }
+}
+
 function isSupabaseConfigured() {
   return Boolean(SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY);
 }
@@ -244,6 +322,29 @@ async function supabaseInsert(table, payload) {
 
     if (!response.ok) {
       throw new Error(`Supabase insert failed: ${response.status}`);
+    }
+  } catch (error) {
+    console.warn("Tarifa.ao Supabase sync skipped.", error);
+  }
+}
+
+async function supabaseUpsert(table, payload) {
+  if (!isSupabaseConfigured()) return;
+
+  try {
+    const response = await fetch(`${SUPABASE_URL.replace(/\/$/, "")}/rest/v1/${table}`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "resolution=merge-duplicates,return=minimal"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Supabase upsert failed: ${response.status}`);
     }
   } catch (error) {
     console.warn("Tarifa.ao Supabase sync skipped.", error);
@@ -495,6 +596,11 @@ function compareRoute(route) {
   trackRouteSearch(currentRoute);
   updateRouteMap(currentRoute);
   showView("resultsView");
+
+  if (shouldShowRegistrationModal()) {
+    registrationModalShownThisSession = true;
+    window.setTimeout(() => $("#registerDialog")?.showModal(), 2000);
+  }
 }
 
 function selectRide(ride) {
@@ -504,6 +610,7 @@ function selectRide(ride) {
   $("#redirectTitle").textContent = `Abrir ${ride.name}`;
   $("#openExternalLink").href = ride.url;
   showView("redirectView");
+  trackEvent("app_view", { app_id: ride.id, app_name: ride.name, estimated_price: Math.round(ride.estimate) });
 }
 
 function makeRouteKey(pickup, destination) {
@@ -531,6 +638,7 @@ function saveContributionAndSync(item, source = "local") {
 
 function trackFareContribution(item, source = "local") {
   supabaseInsert("fare_contributions", {
+    visitor_id: getDeviceId(),
     device_id: getDeviceId(),
     app_version: APP_VERSION,
     route_key: item.routeKey,
@@ -551,6 +659,7 @@ function trackRouteSearch(route) {
   const destinationLocation = route.destinationLocation || {};
 
   supabaseInsert("route_searches", {
+    visitor_id: getDeviceId(),
     device_id: getDeviceId(),
     app_version: APP_VERSION,
     pickup_label: route.pickup,
@@ -564,6 +673,16 @@ function trackRouteSearch(route) {
     sort_mode: currentSort,
     results_count: currentResults.length,
     source: "web_mvp"
+  });
+}
+
+function trackEvent(eventType, payload = {}) {
+  supabaseInsert("events", {
+    visitor_id: getDeviceId(),
+    device_id: getDeviceId(),
+    event_type: eventType,
+    payload,
+    app_version: APP_VERSION
   });
 }
 
@@ -601,6 +720,7 @@ function renderHistory() {
 function openContributeDialog() {
   $("#contribApp").value = selectedRide?.name || currentResults[0]?.name || "Yango";
   $("#contributeDialog").showModal();
+  trackEvent("contribute_open");
 }
 
 function buildContribution() {
@@ -1297,6 +1417,7 @@ function initEvents() {
 
     saveContributionAndSync(item, "whatsapp");
     sendContributionWhatsApp(item);
+    trackEvent("contribute_submit", { app: item.app, price: item.price, source: "whatsapp" });
     resetContributionForm();
     $("#contributeDialog").close();
 
@@ -1311,6 +1432,7 @@ function initEvents() {
     if (!item) return;
 
     saveContributionAndSync(item, "local_only");
+    trackEvent("contribute_submit", { app: item.app, price: item.price, source: "local_only" });
     resetContributionForm();
     $("#contributeDialog").close();
 
@@ -1382,17 +1504,70 @@ function initEvents() {
     }
   });
 
+  $("#openExternalLink")?.addEventListener("click", () => {
+    if (selectedRide) {
+      trackEvent("app_click", { app_id: selectedRide.id, app_name: selectedRide.name, estimated_price: Math.round(selectedRide.estimate) });
+    }
+  });
+
   $$(".signout-btn").forEach(btn => {
     btn.addEventListener("click", () => {
-      showToast("Conta não necessária nesta versão beta.");
+      const visitor = getVisitor();
+      if (visitor.isRegistered) {
+        saveVisitor({ id: visitor.id, isRegistered: false });
+        updateSettingsProfile();
+        showToast("Dados de perfil removidos deste dispositivo.");
+      } else {
+        showToast("Conta não necessária nesta versão beta.");
+      }
     });
   });
 
   $$(".profile-link").forEach(btn => {
     btn.addEventListener("click", () => {
-      showToast("Perfil de utilizador disponível em breve.");
+      if (getVisitor().isRegistered) {
+        showToast("Edição de perfil disponível em breve.");
+      } else {
+        $("#registerDialog")?.showModal();
+      }
     });
   });
+
+  $("#registerForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const email = $("#regEmail").value.trim();
+    const firstName = $("#regFirstName").value.trim();
+    const lastName = $("#regLastName").value.trim();
+
+    if (!email || !firstName) {
+      showToast("Preenche o email e o nome próprio.");
+      return;
+    }
+
+    const submitBtn = $("#regSubmitBtn");
+    submitBtn.disabled = true;
+    submitBtn.textContent = "A registar...";
+
+    try {
+      await registerVisitor(email, firstName, lastName);
+      trackEvent("register");
+      $("#registerDialog").close();
+      showToast(`Bem-vindo, ${firstName}! Registo guardado.`);
+    } catch {
+      showToast("Erro ao registar. Tenta novamente.");
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Registar";
+    }
+  });
+
+  const dismissRegister = () => {
+    localStorage.setItem("tarifaao_reg_dismissed", String(Date.now()));
+    $("#registerDialog")?.close();
+  };
+
+  $("#skipRegister")?.addEventListener("click", dismissRegister);
+  $("#closeRegister")?.addEventListener("click", dismissRegister);
 }
 
 function seedDemoResults() {
@@ -1420,6 +1595,8 @@ function initApp() {
   window.setInterval(updateCurrentTimeDisplay, 1000);
   updateDistanceDisplay();
   requestCurrentLocation();
+  updateSettingsProfile();
+  trackEvent("app_open");
 }
 
 initApp();

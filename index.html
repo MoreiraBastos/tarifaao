@@ -176,10 +176,10 @@
       <div class="sheet-handle" aria-hidden="true"></div>
       <div class="settings-panel settings-panel-main active" id="settingsMainPanel">
         <div class="settings-profile">
-          <div class="profile-photo" aria-hidden="true">TB</div>
+          <div class="profile-photo" id="settingsProfilePhoto" aria-hidden="true">?</div>
           <small>Conta Tarifa.ao</small>
-          <strong>Ol&aacute;, Tiago</strong>
-          <button type="button" class="profile-link">Ver perfil</button>
+          <strong id="settingsProfileName">Visitante</strong>
+          <button type="button" class="profile-link" id="profileLinkBtn">Registar</button>
         </div>
 
         <div class="settings-card">
@@ -342,6 +342,30 @@
         <button class="primary-btn" type="button" id="confirmMapLocation" disabled>Usar local</button>
       </div>
     </div>
+  </dialog>
+
+  <dialog id="registerDialog" class="modal">
+    <div class="modal-head">
+      <h2>Bem-vindo ao Tarifa.ao</h2>
+      <button type="button" class="icon-close" id="closeRegister">&times;</button>
+    </div>
+    <p class="register-lead">Regista-te para receber actualizações sobre novas apps e melhorias. É grátis e sem spam.</p>
+    <form id="registerForm" novalidate>
+      <label>
+        <span>Email</span>
+        <input id="regEmail" type="email" placeholder="o.teu@email.com" required autocomplete="email" inputmode="email" />
+      </label>
+      <label>
+        <span>Nome próprio</span>
+        <input id="regFirstName" type="text" placeholder="Ex: Maria" required autocomplete="given-name" />
+      </label>
+      <label>
+        <span>Apelido</span>
+        <input id="regLastName" type="text" placeholder="Ex: Santos" autocomplete="family-name" />
+      </label>
+      <button class="primary-btn" type="submit" id="regSubmitBtn">Registar</button>
+      <button class="ghost-btn" type="button" id="skipRegister">Agora não</button>
+    </form>
   </dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
