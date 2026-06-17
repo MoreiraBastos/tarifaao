@@ -398,12 +398,14 @@ function initMapBackground() {
     disableDefaultUI: true,
     zoomControl: true,
     zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_BOTTOM },
-    gestureHandling: "greedy",
-    mapId: "tarifaao-bg"
+    gestureHandling: "greedy"
   });
 
   document.body.classList.add("google-map-ready");
-  updateRouteMap(currentRoute);
+  window.setTimeout(() => {
+    google.maps.event.trigger(backgroundMap, "resize");
+    updateRouteMap(currentRoute);
+  }, 300);
 }
 
 function clearBackgroundRoute() {
@@ -417,15 +419,18 @@ function clearBackgroundRoute() {
 }
 
 function createRouteMarker(point, index) {
-  const color = index === 0 ? "#071a2f" : "#0f62fe";
-  const size = index === 0 ? 14 : 16;
-  const pin = document.createElement("div");
-  pin.style.cssText = `width:${size}px;height:${size}px;border-radius:50%;background:${color};border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3)`;
-
-  return new google.maps.marker.AdvancedMarkerElement({
+  return new google.maps.Marker({
     position: { lat: point.lat, lng: point.lng },
     map: backgroundMap,
-    content: pin
+    clickable: false,
+    icon: {
+      path: google.maps.SymbolPath.CIRCLE,
+      scale: index === 0 ? 7 : 8,
+      fillColor: index === 0 ? "#071a2f" : "#0f62fe",
+      fillOpacity: 1,
+      strokeColor: "#ffffff",
+      strokeWeight: 3
+    }
   });
 }
 
@@ -1162,19 +1167,17 @@ function setPickerMarker(location) {
 
   const pos = { lat: location.lat, lng: location.lng };
   if (!pickerMarker) {
-    pickerMarker = new google.maps.marker.AdvancedMarkerElement({
+    pickerMarker = new google.maps.Marker({
       position: pos,
       map: pickerMap
     });
   } else {
-    pickerMarker.position = pos;
+    pickerMarker.setPosition(pos);
   }
 }
 
 function initPickerMap(center) {
   const canvas = $("#mapCanvas");
-  canvas.classList.remove("unavailable");
-  canvas.textContent = "";
 
   if (!window.google?.maps) {
     canvas.classList.add("unavailable");
@@ -1182,27 +1185,30 @@ function initPickerMap(center) {
     return;
   }
 
-  if (!pickerMap) {
-    pickerMap = new google.maps.Map(canvas, {
-      center: { lat: center.lat, lng: center.lng },
-      zoom: center.zoom || 13,
-      disableDefaultUI: true,
-      zoomControl: true,
-      gestureHandling: "greedy",
-      mapId: "tarifaao-picker"
-    });
-    pickerMap.addListener("click", (event) => {
-      selectMapPoint(event.latLng.lat(), event.latLng.lng());
-    });
-  } else {
-    pickerMap.setCenter({ lat: center.lat, lng: center.lng });
-    pickerMap.setZoom(center.zoom || 13);
-  }
+  canvas.classList.remove("unavailable");
 
   if (pickerMarker) {
     pickerMarker.setMap(null);
     pickerMarker = null;
   }
+
+  if (pickerMap) {
+    pickerMap.setCenter({ lat: center.lat, lng: center.lng });
+    pickerMap.setZoom(center.zoom || 13);
+  } else {
+    pickerMap = new google.maps.Map(canvas, {
+      center: { lat: center.lat, lng: center.lng },
+      zoom: center.zoom || 13,
+      disableDefaultUI: true,
+      zoomControl: true,
+      gestureHandling: "greedy"
+    });
+    pickerMap.addListener("click", (event) => {
+      selectMapPoint(event.latLng.lat(), event.latLng.lng());
+    });
+  }
+
+  google.maps.event.trigger(pickerMap, "resize");
 
   const existing = fieldLocations[activeMapFieldId];
   if (isValidLocation(existing)) setPickerMarker(existing);
@@ -1251,7 +1257,8 @@ async function openMapPicker(fieldId) {
       const location = await geocodeAddress(inputValue);
       if (!location || activeMapFieldId !== fieldId) return;
       if (pickerMap) {
-        pickerMap.setView([location.lat, location.lng], 15);
+        pickerMap.setCenter({ lat: location.lat, lng: location.lng });
+        pickerMap.setZoom(15);
       }
     } catch {
       // Mantém o mapa no centro padrão se a busca pelo texto falhar.
