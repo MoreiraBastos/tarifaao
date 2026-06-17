@@ -388,15 +388,6 @@ function updateCurrentTimeDisplay() {
   }
 }
 
-const GRAYSCALE_MAP_STYLE = [
-  { elementType: "geometry", stylers: [{ saturation: -85 }, { lightness: 5 }] },
-  { elementType: "labels.text.fill", stylers: [{ saturation: -60 }, { lightness: -10 }] },
-  { elementType: "labels.text.stroke", stylers: [{ visibility: "on" }, { lightness: 16 }] },
-  { featureType: "road", elementType: "geometry", stylers: [{ lightness: 12 }] },
-  { featureType: "poi", stylers: [{ visibility: "off" }] },
-  { featureType: "transit", stylers: [{ visibility: "off" }] }
-];
-
 window.initGoogleMapsCallback = function () {
   initMapBackground();
 };
@@ -412,8 +403,7 @@ function initMapBackground() {
     zoomControl: true,
     zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_BOTTOM },
     gestureHandling: "greedy",
-    mapId: "tarifaao-bg",
-    styles: GRAYSCALE_MAP_STYLE
+    mapId: "tarifaao-bg"
   });
 
   document.body.classList.add("google-map-ready");
@@ -1203,8 +1193,7 @@ function initPickerMap(center) {
       disableDefaultUI: true,
       zoomControl: true,
       gestureHandling: "greedy",
-      mapId: "tarifaao-picker",
-      styles: GRAYSCALE_MAP_STYLE
+      mapId: "tarifaao-picker"
     });
     pickerMap.addListener("click", (event) => {
       selectMapPoint(event.latLng.lat(), event.latLng.lng());
