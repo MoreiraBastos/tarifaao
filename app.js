@@ -19,7 +19,7 @@ const APPS = [
     perKm: 310,
     availability: 0.98,
     logo: "assets/yango.png",
-    url: "https://yango.com/"
+    url: "yango://"
   },
   {
     id: "heetch",
@@ -30,7 +30,7 @@ const APPS = [
     perKm: 340,
     availability: 0.78,
     logo: "assets/heetch.png",
-    url: "https://www.heetch.com/"
+    url: "heetch://"
   },
   {
     id: "kubinga",
@@ -63,7 +63,7 @@ const APPS = [
     perKm: 290,
     availability: 0.7,
     logo: "assets/indrive.png",
-    url: "https://indrive.com/"
+    url: "indrive://"
   }
 ];
 
