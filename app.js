@@ -142,6 +142,7 @@ function initLoadingScreen() {
       document.body.classList.remove("app-loading");
       document.body.classList.add("app-ready");
       loadingScreen.setAttribute("aria-hidden", "true");
+      initMapBackground();
     }, remaining);
   };
 
@@ -1612,7 +1613,6 @@ function seedDemoResults() {
 function initApp() {
   initLoadingScreen();
   updatePrivacyCopy();
-  initMapBackground();
   initEvents();
   updateCurrentTimeDisplay();
   window.setInterval(updateCurrentTimeDisplay, 1000);
