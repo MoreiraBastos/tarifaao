@@ -2,7 +2,6 @@ const OWNER_WHATSAPP = "351963201382"; // Troca pelo teu número. Ex: 2449217444
 
 const APP_VERSION = "v1.01-beta";
 const LUANDA_CENTER = { lat: -8.839, lng: 13.2894, zoom: 12 };
-const GOOGLE_MAPS_KEY = "YOUR_GOOGLE_MAPS_KEY_HERE";
 const SUPABASE_URL = document.querySelector('meta[name="supabase-url"]')?.content.trim() ||
   window.TARIFAAO_SUPABASE_URL ||
   "";
@@ -397,10 +396,6 @@ const GRAYSCALE_MAP_STYLE = [
   { featureType: "poi", stylers: [{ visibility: "off" }] },
   { featureType: "transit", stylers: [{ visibility: "off" }] }
 ];
-
-window.initGoogleMapsCallback = function () {
-  initMapBackground();
-};
 
 function initMapBackground() {
   const canvas = $("#appMap");
@@ -1621,6 +1616,7 @@ function seedDemoResults() {
 function initApp() {
   initLoadingScreen();
   updatePrivacyCopy();
+  initMapBackground();
   initEvents();
   updateCurrentTimeDisplay();
   window.setInterval(updateCurrentTimeDisplay, 1000);
