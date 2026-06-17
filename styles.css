@@ -209,46 +209,13 @@ body.app-ready .loading-screen {
   overflow: hidden;
 }
 
-.app-map.leaflet-container,
-.app-map .leaflet-container {
-  width: 100%;
-  height: 100%;
+.app-map .gm-style {
   font: inherit;
 }
 
-.app-map .leaflet-tile {
-  filter: grayscale(.86) saturate(.48) contrast(.9) brightness(1.08);
-}
-
-.app-map .leaflet-pane,
-.app-map .leaflet-control-container {
-  z-index: 1;
-}
-
-.app-map .leaflet-control-zoom {
-  border: 1px solid rgba(255,255,255,.84);
-  box-shadow: 0 10px 26px rgba(7,26,47,.1);
-}
-
-.app-map .leaflet-control-zoom a {
-  width: 38px;
-  height: 38px;
-  display: grid;
-  place-items: center;
-  border: 0;
-  background: rgba(255,255,255,.86);
-  color: var(--tao-black);
-  font: 700 19px/1 "IBM Plex Sans", Arial, sans-serif;
-  backdrop-filter: blur(18px);
-}
-
-.app-map .leaflet-control-zoom a:first-child {
-  border-bottom: 1px solid var(--tao-line);
-}
-
-.app-map .leaflet-bottom.leaflet-right {
-  right: 12px;
-  bottom: 76px;
+.app-map .gmnoprint {
+  bottom: 76px !important;
+  right: 12px !important;
 }
 
 .map-fallback-grid {
@@ -260,9 +227,9 @@ body.app-ready .loading-screen {
   background-size: 72px 72px;
 }
 
-body.leaflet-map-ready .map-fallback-grid,
-body.leaflet-map-ready .map-fallback-road,
-body.leaflet-map-ready .map-fallback-pin {
+body.google-map-ready .map-fallback-grid,
+body.google-map-ready .map-fallback-road,
+body.google-map-ready .map-fallback-pin {
   display: none;
 }
 
@@ -1645,9 +1612,6 @@ p {
   text-align: center;
 }
 
-.leaflet-container {
-  font: inherit;
-}
 
 .selected-location {
   display: grid;

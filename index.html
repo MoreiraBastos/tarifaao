@@ -14,9 +14,7 @@
   <link rel="apple-touch-icon" href="assets/favicon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preconnect" href="https://unpkg.com">
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link href="styles.css" rel="stylesheet" />
 </head>
 <body class="app-loading">
@@ -249,7 +247,7 @@
     <span>© 2026 Edson Moreira Bastos</span>
     <button type="button" id="openPrivacy">Privacidade</button>
     <button type="button" id="openTerms">Termos</button>
-    <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>
+    <span>Mapas: Google Maps</span>
   </footer>
 
   <dialog id="contributeDialog" class="modal">
@@ -370,7 +368,7 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="app.js"></script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_KEY_HERE&libraries=places&callback=initGoogleMapsCallback" async defer></script>
 </body>
 </html>

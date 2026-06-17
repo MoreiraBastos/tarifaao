@@ -2,7 +2,7 @@ const OWNER_WHATSAPP = "351963201382"; // Troca pelo teu número. Ex: 2449217444
 
 const APP_VERSION = "v1.01-beta";
 const LUANDA_CENTER = { lat: -8.839, lng: 13.2894, zoom: 12 };
-const NOMINATIM_BASE = "https://nominatim.openstreetmap.org";
+const GOOGLE_MAPS_KEY = "YOUR_GOOGLE_MAPS_KEY_HERE";
 const SUPABASE_URL = document.querySelector('meta[name="supabase-url"]')?.content.trim() ||
   window.TARIFAAO_SUPABASE_URL ||
   "";
@@ -389,58 +389,65 @@ function updateCurrentTimeDisplay() {
   }
 }
 
+const GRAYSCALE_MAP_STYLE = [
+  { elementType: "geometry", stylers: [{ saturation: -85 }, { lightness: 5 }] },
+  { elementType: "labels.text.fill", stylers: [{ saturation: -60 }, { lightness: -10 }] },
+  { elementType: "labels.text.stroke", stylers: [{ visibility: "on" }, { lightness: 16 }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ lightness: 12 }] },
+  { featureType: "poi", stylers: [{ visibility: "off" }] },
+  { featureType: "transit", stylers: [{ visibility: "off" }] }
+];
+
+window.initGoogleMapsCallback = function () {
+  initMapBackground();
+};
+
 function initMapBackground() {
   const canvas = $("#appMap");
-  if (!canvas || !window.L || backgroundMap) return;
+  if (!canvas || !window.google?.maps || backgroundMap) return;
 
-  backgroundMap = window.L.map(canvas, {
+  backgroundMap = new google.maps.Map(canvas, {
+    center: { lat: LUANDA_CENTER.lat, lng: LUANDA_CENTER.lng },
+    zoom: LUANDA_CENTER.zoom,
+    disableDefaultUI: true,
     zoomControl: true,
-    attributionControl: false,
-    dragging: true,
-    touchZoom: true,
-    doubleClickZoom: true,
-    scrollWheelZoom: true,
-    boxZoom: true,
-    keyboard: true,
-    tap: true
-  }).setView([LUANDA_CENTER.lat, LUANDA_CENTER.lng], LUANDA_CENTER.zoom);
+    zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_BOTTOM },
+    gestureHandling: "greedy",
+    styles: GRAYSCALE_MAP_STYLE
+  });
 
-  backgroundMap.zoomControl.setPosition("bottomright");
-
-  window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19
-  }).addTo(backgroundMap);
-
-  document.body.classList.add("leaflet-map-ready");
-  window.setTimeout(() => {
-    backgroundMap.invalidateSize();
-    updateRouteMap(currentRoute);
-  }, 80);
+  document.body.classList.add("google-map-ready");
+  updateRouteMap(currentRoute);
 }
 
 function clearBackgroundRoute() {
-  backgroundRouteMarkers.forEach(marker => marker.remove());
+  backgroundRouteMarkers.forEach(marker => marker.setMap(null));
   backgroundRouteMarkers = [];
 
   if (backgroundRouteLine) {
-    backgroundRouteLine.remove();
+    backgroundRouteLine.setMap(null);
     backgroundRouteLine = null;
   }
 }
 
 function createRouteMarker(point, index) {
-  return window.L.circleMarker([point.lat, point.lng], {
-    radius: index === 0 ? 7 : 8,
-    color: "#ffffff",
-    weight: 3,
-    fillColor: index === 0 ? "#071a2f" : "#0f62fe",
-    fillOpacity: 1,
-    interactive: false
+  return new google.maps.Marker({
+    position: { lat: point.lat, lng: point.lng },
+    map: backgroundMap,
+    clickable: false,
+    icon: {
+      path: google.maps.SymbolPath.CIRCLE,
+      scale: index === 0 ? 7 : 8,
+      fillColor: index === 0 ? "#071a2f" : "#0f62fe",
+      fillOpacity: 1,
+      strokeColor: "#ffffff",
+      strokeWeight: 3
+    }
   });
 }
 
 function updateRouteMap(route = currentRoute) {
-  if (!backgroundMap || !window.L) return;
+  if (!backgroundMap || !window.google?.maps) return;
 
   clearBackgroundRoute();
 
@@ -449,36 +456,35 @@ function updateRouteMap(route = currentRoute) {
   const points = [pickup, destination].filter(isValidLocation);
 
   if (!points.length) {
-    backgroundMap.setView([LUANDA_CENTER.lat, LUANDA_CENTER.lng], LUANDA_CENTER.zoom);
+    backgroundMap.setCenter({ lat: LUANDA_CENTER.lat, lng: LUANDA_CENTER.lng });
+    backgroundMap.setZoom(LUANDA_CENTER.zoom);
     return;
   }
 
   points.forEach((point, index) => {
-    const marker = createRouteMarker(point, index).addTo(backgroundMap);
-    backgroundRouteMarkers.push(marker);
+    backgroundRouteMarkers.push(createRouteMarker(point, index));
   });
 
   if (isValidLocation(pickup) && isValidLocation(destination)) {
-    const routePoints = [
-      [pickup.lat, pickup.lng],
-      [destination.lat, destination.lng]
-    ];
-
-    backgroundRouteLine = window.L.polyline(routePoints, {
-      color: "#071a2f",
-      opacity: .82,
-      weight: 4,
-      interactive: false
-    }).addTo(backgroundMap);
-
-    backgroundMap.fitBounds(window.L.latLngBounds(routePoints), {
-      padding: [96, 96],
-      maxZoom: 15,
-      animate: true,
-      duration: .25
+    backgroundRouteLine = new google.maps.Polyline({
+      path: [
+        { lat: pickup.lat, lng: pickup.lng },
+        { lat: destination.lat, lng: destination.lng }
+      ],
+      strokeColor: "#071a2f",
+      strokeOpacity: 0.82,
+      strokeWeight: 4,
+      map: backgroundMap,
+      clickable: false
     });
+
+    const bounds = new google.maps.LatLngBounds();
+    bounds.extend({ lat: pickup.lat, lng: pickup.lng });
+    bounds.extend({ lat: destination.lat, lng: destination.lng });
+    backgroundMap.fitBounds(bounds, { top: 96, right: 96, bottom: 96, left: 96 });
   } else {
-    backgroundMap.setView([points[0].lat, points[0].lng], 14);
+    backgroundMap.setCenter({ lat: points[0].lat, lng: points[0].lng });
+    backgroundMap.setZoom(14);
   }
 }
 
@@ -857,64 +863,53 @@ function formatFallbackAddress(lat, lng) {
   return `Lat ${Number(lat).toFixed(5)}, Long ${Number(lng).toFixed(5)}`;
 }
 
-function shortenDisplayName(displayName) {
-  return String(displayName || "")
-    .split(",")
-    .map(part => part.trim())
-    .filter(Boolean)
-    .slice(0, 4)
-    .join(", ");
-}
+function formatGoogleAddress(result) {
+  const components = result.address_components || [];
+  const get = (type) => components.find(c => c.types.includes(type))?.long_name;
 
-function uniqueParts(parts) {
+  const parts = [
+    get("route") || get("neighborhood") || get("sublocality_level_2") || get("sublocality_level_1"),
+    get("sublocality_level_1") || get("locality"),
+    get("locality") || get("administrative_area_level_1")
+  ].filter(Boolean);
+
   const seen = new Set();
-  return parts.filter((part) => {
-    const clean = String(part || "").trim();
-    const key = clean.toLowerCase();
-    if (!clean || seen.has(key)) return false;
-    seen.add(key);
+  const unique = parts.filter(p => {
+    const k = p.toLowerCase();
+    if (seen.has(k)) return false;
+    seen.add(k);
     return true;
   });
+
+  return unique.slice(0, 3).join(", ") || result.formatted_address || "";
 }
 
-function formatNominatimAddress(item) {
-  const address = item?.address || {};
-  const primary = item?.name ||
-    address.road ||
-    address.neighbourhood ||
-    address.suburb ||
-    address.city_district ||
-    address.town ||
-    address.city ||
-    address.village;
-
-  const pieces = uniqueParts([
-    primary,
-    address.neighbourhood,
-    address.suburb,
-    address.city || address.town || address.county || address.state,
-    address.country
-  ]);
-
-  return pieces.slice(0, 4).join(", ") || shortenDisplayName(item?.display_name);
+let _geocoder = null;
+function getGeocoder() {
+  if (!_geocoder && window.google?.maps) _geocoder = new google.maps.Geocoder();
+  return _geocoder;
 }
 
-async function fetchJson(url) {
-  const response = await fetch(url, {
-    headers: { Accept: "application/json" }
-  });
-
-  if (!response.ok) {
-    throw new Error(`Pedido falhou com estado ${response.status}`);
+let _autocompleteService = null;
+function getAutocompleteService() {
+  if (!_autocompleteService && window.google?.maps?.places) {
+    _autocompleteService = new google.maps.places.AutocompleteService();
   }
-
-  return response.json();
+  return _autocompleteService;
 }
 
 async function reverseGeocode(lat, lng) {
-  const url = `${NOMINATIM_BASE}/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}&zoom=18&addressdetails=1`;
-  const data = await fetchJson(url);
-  return toLocation(formatNominatimAddress(data) || formatFallbackAddress(lat, lng), lat, lng);
+  const geocoder = getGeocoder();
+  if (!geocoder) return toLocation(formatFallbackAddress(lat, lng), lat, lng);
+
+  return new Promise((resolve) => {
+    geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+      const label = status === "OK" && results[0]
+        ? formatGoogleAddress(results[0])
+        : formatFallbackAddress(lat, lng);
+      resolve(toLocation(label, lat, lng));
+    });
+  });
 }
 
 async function geocodeAddress(query) {
@@ -924,15 +919,26 @@ async function geocodeAddress(query) {
   const cacheKey = cleanQuery.toLowerCase();
   if (geocodeCache.has(cacheKey)) return geocodeCache.get(cacheKey);
 
-  const url = `${NOMINATIM_BASE}/search?format=jsonv2&limit=1&countrycodes=ao&addressdetails=1&q=${encodeURIComponent(cleanQuery)}`;
-  const data = await fetchJson(url);
-  const match = Array.isArray(data) ? data[0] : null;
-  const location = match
-    ? toLocation(formatNominatimAddress(match) || cleanQuery, match.lat, match.lon)
-    : null;
+  const geocoder = getGeocoder();
+  if (!geocoder) return null;
 
-  geocodeCache.set(cacheKey, location);
-  return location;
+  return new Promise((resolve) => {
+    geocoder.geocode(
+      { address: cleanQuery, componentRestrictions: { country: "ao" } },
+      (results, status) => {
+        const match = status === "OK" && results?.[0];
+        const location = match
+          ? toLocation(
+              formatGoogleAddress(match),
+              match.geometry.location.lat(),
+              match.geometry.location.lng()
+            )
+          : null;
+        geocodeCache.set(cacheKey, location);
+        resolve(location);
+      }
+    );
+  });
 }
 
 async function geocodeSuggestions(query) {
@@ -944,17 +950,38 @@ async function geocodeSuggestions(query) {
     return sortSuggestionsByUserDistance(suggestionCache.get(cacheKey));
   }
 
-  const url = `${NOMINATIM_BASE}/search?format=jsonv2&limit=5&countrycodes=ao&addressdetails=1&q=${encodeURIComponent(cleanQuery)}`;
-  const data = await fetchJson(url);
-  const suggestions = Array.isArray(data)
-    ? data
-        .map(item => ({
-          ...toLocation(formatNominatimAddress(item) || cleanQuery, item.lat, item.lon),
-          detail: shortenDisplayName(item.display_name)
-        }))
-        .filter(isValidLocation)
-    : [];
+  const service = getAutocompleteService();
+  if (!service) return [];
 
+  const predictions = await new Promise((resolve) => {
+    service.getPlacePredictions(
+      { input: cleanQuery, componentRestrictions: { country: "ao" } },
+      (preds, status) =>
+        resolve(status === google.maps.places.PlacesServiceStatus.OK ? preds || [] : [])
+    );
+  });
+
+  const geocoder = getGeocoder();
+  const results = await Promise.all(
+    predictions.slice(0, 5).map(pred =>
+      new Promise((resolve) => {
+        geocoder.geocode({ placeId: pred.place_id }, (res, status) => {
+          if (status !== "OK" || !res?.[0]) { resolve(null); return; }
+          const loc = res[0].geometry.location;
+          resolve({
+            ...toLocation(
+              pred.structured_formatting?.main_text || pred.description.split(",")[0].trim(),
+              loc.lat(),
+              loc.lng()
+            ),
+            detail: pred.description
+          });
+        });
+      })
+    )
+  );
+
+  const suggestions = results.filter(Boolean).filter(isValidLocation);
   suggestionCache.set(cacheKey, suggestions);
   return sortSuggestionsByUserDistance(suggestions);
 }
@@ -1148,14 +1175,15 @@ function getMapCenterForField(fieldId) {
 }
 
 function setPickerMarker(location) {
-  if (!isValidLocation(location)) return;
-
-  if (!pickerMap || !window.L) return;
+  if (!isValidLocation(location) || !pickerMap) return;
 
   if (!pickerMarker) {
-    pickerMarker = window.L.marker([location.lat, location.lng]).addTo(pickerMap);
+    pickerMarker = new google.maps.Marker({
+      position: { lat: location.lat, lng: location.lng },
+      map: pickerMap
+    });
   } else {
-    pickerMarker.setLatLng([location.lat, location.lng]);
+    pickerMarker.setPosition({ lat: location.lat, lng: location.lng });
   }
 }
 
@@ -1164,32 +1192,36 @@ function initPickerMap(center) {
   canvas.classList.remove("unavailable");
   canvas.textContent = "";
 
-  if (!window.L) {
+  if (!window.google?.maps) {
     canvas.classList.add("unavailable");
     canvas.textContent = "Mapa indisponível. Confirma a ligação à internet e tenta novamente.";
     return;
   }
 
   if (!pickerMap) {
-    pickerMap = window.L.map(canvas).setView([center.lat, center.lng], center.zoom || 13);
-    window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: "&copy; OpenStreetMap"
-    }).addTo(pickerMap);
-    pickerMap.on("click", (event) => selectMapPoint(event.latlng.lat, event.latlng.lng));
+    pickerMap = new google.maps.Map(canvas, {
+      center: { lat: center.lat, lng: center.lng },
+      zoom: center.zoom || 13,
+      disableDefaultUI: true,
+      zoomControl: true,
+      gestureHandling: "greedy",
+      styles: GRAYSCALE_MAP_STYLE
+    });
+    pickerMap.addListener("click", (event) => {
+      selectMapPoint(event.latLng.lat(), event.latLng.lng());
+    });
   } else {
-    pickerMap.setView([center.lat, center.lng], center.zoom || 13);
+    pickerMap.setCenter({ lat: center.lat, lng: center.lng });
+    pickerMap.setZoom(center.zoom || 13);
   }
 
   if (pickerMarker) {
-    pickerMap.removeLayer(pickerMarker);
+    pickerMarker.setMap(null);
     pickerMarker = null;
   }
 
   const existing = fieldLocations[activeMapFieldId];
   if (isValidLocation(existing)) setPickerMarker(existing);
-
-  window.setTimeout(() => pickerMap.invalidateSize(), 80);
 }
 
 async function selectMapPoint(lat, lng) {
@@ -1589,7 +1621,6 @@ function seedDemoResults() {
 function initApp() {
   initLoadingScreen();
   updatePrivacyCopy();
-  initMapBackground();
   initEvents();
   updateCurrentTimeDisplay();
   window.setInterval(updateCurrentTimeDisplay, 1000);
