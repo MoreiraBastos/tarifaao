@@ -1,6 +1,6 @@
 const OWNER_WHATSAPP = "351963201382"; // Troca pelo teu número. Ex: 244921744420
 
-const APP_VERSION = "v1.01-beta";
+const APP_VERSION = "v1.02-beta";
 const LUANDA_CENTER = { lat: -8.839, lng: 13.2894, zoom: 12 };
 const SUPABASE_URL = document.querySelector('meta[name="supabase-url"]')?.content.trim() ||
   window.TARIFAAO_SUPABASE_URL ||
@@ -19,7 +19,7 @@ const APPS = [
     perKm: 310,
     availability: 0.98,
     logo: "assets/yango.png",
-    url: "yango://"
+    url: "https://apps.apple.com/app/id1099015987"
   },
   {
     id: "heetch",
@@ -41,7 +41,7 @@ const APPS = [
     perKm: 330,
     availability: 0.62,
     logo: "assets/kubinga.png",
-    url: "https://www.google.com/search?q=Kubinga+Angola"
+    url: "kubinga://"
   },
   {
     id: "tleva",
