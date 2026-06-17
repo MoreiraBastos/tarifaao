@@ -397,6 +397,10 @@ const GRAYSCALE_MAP_STYLE = [
   { featureType: "transit", stylers: [{ visibility: "off" }] }
 ];
 
+window.initGoogleMapsCallback = function () {
+  initMapBackground();
+};
+
 function initMapBackground() {
   const canvas = $("#appMap");
   if (!canvas || !window.google?.maps || backgroundMap) return;
@@ -408,6 +412,7 @@ function initMapBackground() {
     zoomControl: true,
     zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_BOTTOM },
     gestureHandling: "greedy",
+    mapId: "tarifaao-bg",
     styles: GRAYSCALE_MAP_STYLE
   });
 
@@ -426,18 +431,15 @@ function clearBackgroundRoute() {
 }
 
 function createRouteMarker(point, index) {
-  return new google.maps.Marker({
+  const color = index === 0 ? "#071a2f" : "#0f62fe";
+  const size = index === 0 ? 14 : 16;
+  const pin = document.createElement("div");
+  pin.style.cssText = `width:${size}px;height:${size}px;border-radius:50%;background:${color};border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3)`;
+
+  return new google.maps.marker.AdvancedMarkerElement({
     position: { lat: point.lat, lng: point.lng },
     map: backgroundMap,
-    clickable: false,
-    icon: {
-      path: google.maps.SymbolPath.CIRCLE,
-      scale: index === 0 ? 7 : 8,
-      fillColor: index === 0 ? "#071a2f" : "#0f62fe",
-      fillOpacity: 1,
-      strokeColor: "#ffffff",
-      strokeWeight: 3
-    }
+    content: pin
   });
 }
 
@@ -1172,13 +1174,14 @@ function getMapCenterForField(fieldId) {
 function setPickerMarker(location) {
   if (!isValidLocation(location) || !pickerMap) return;
 
+  const pos = { lat: location.lat, lng: location.lng };
   if (!pickerMarker) {
-    pickerMarker = new google.maps.Marker({
-      position: { lat: location.lat, lng: location.lng },
+    pickerMarker = new google.maps.marker.AdvancedMarkerElement({
+      position: pos,
       map: pickerMap
     });
   } else {
-    pickerMarker.setPosition({ lat: location.lat, lng: location.lng });
+    pickerMarker.position = pos;
   }
 }
 
@@ -1200,6 +1203,7 @@ function initPickerMap(center) {
       disableDefaultUI: true,
       zoomControl: true,
       gestureHandling: "greedy",
+      mapId: "tarifaao-picker",
       styles: GRAYSCALE_MAP_STYLE
     });
     pickerMap.addListener("click", (event) => {
@@ -1616,7 +1620,6 @@ function seedDemoResults() {
 function initApp() {
   initLoadingScreen();
   updatePrivacyCopy();
-  initMapBackground();
   initEvents();
   updateCurrentTimeDisplay();
   window.setInterval(updateCurrentTimeDisplay, 1000);
