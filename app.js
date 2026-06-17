@@ -19,7 +19,7 @@ const APPS = [
     perKm: 310,
     availability: 0.98,
     logo: "assets/yango.png",
-    url: "https://apps.apple.com/app/id1099015987"
+    url: "yango-ao://"
   },
   {
     id: "heetch",
