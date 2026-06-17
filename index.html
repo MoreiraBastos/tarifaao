@@ -31,16 +31,7 @@
     </div>
   </div>
 
-  <div id="appMap" class="app-map" aria-label="Mapa de Luanda">
-    <div class="map-fallback-grid"></div>
-    <div class="map-fallback-road road-a"></div>
-    <div class="map-fallback-road road-b"></div>
-    <div class="map-fallback-road road-c"></div>
-    <div class="map-fallback-road road-d"></div>
-    <div class="map-fallback-pin pin-origin"></div>
-    <div class="map-fallback-pin pin-destination"></div>
-  </div>
-  <div class="map-scrim" aria-hidden="true"></div>
+  <div id="appMap" class="app-map" aria-label="Mapa de Luanda"></div>
 
   <header class="app-header">
     <button class="map-control" id="locationBtn" aria-label="Usar localização actual">
@@ -369,6 +360,6 @@
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
   <script src="app.js"></script>
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCy0QMzAcUn0cy1D5SrtfAH2R5yV9AhwnE&libraries=places,marker&callback=initGoogleMapsCallback" async defer></script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCy0QMzAcUn0cy1D5SrtfAH2R5yV9AhwnE&loading=async&libraries=places,marker&callback=initGoogleMapsCallback" async defer></script>
 </body>
 </html>

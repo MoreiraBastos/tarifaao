@@ -204,9 +204,10 @@ body.app-ready .loading-screen {
 .app-map {
   position: fixed;
   inset: 0;
+  width: 100%;
+  height: 100%;
   z-index: 0;
   background: #e8e7e1;
-  overflow: hidden;
 }
 
 .app-map .gm-style {
@@ -217,47 +218,6 @@ body.app-ready .loading-screen {
   bottom: 76px !important;
   right: 12px !important;
 }
-
-.map-fallback-grid {
-  position: absolute;
-  inset: -40px;
-  background:
-    linear-gradient(90deg, rgba(11,11,12,.065) 1px, transparent 1px),
-    linear-gradient(0deg, rgba(11,11,12,.05) 1px, transparent 1px);
-  background-size: 72px 72px;
-}
-
-body.google-map-ready .map-fallback-grid,
-body.google-map-ready .map-fallback-road,
-body.google-map-ready .map-fallback-pin {
-  display: none;
-}
-
-.map-fallback-road {
-  position: absolute;
-  height: 5px;
-  background: rgba(255,255,255,.82);
-  box-shadow: 0 0 0 1px rgba(11,11,12,.05);
-  transform-origin: left center;
-}
-
-.road-a { width: 92vw; top: 26%; left: -8%; transform: rotate(16deg); }
-.road-b { width: 80vw; top: 48%; left: 14%; transform: rotate(-12deg); }
-.road-c { width: 105vw; top: 70%; left: -18%; transform: rotate(7deg); }
-.road-d { width: 46vw; top: 18%; right: -8%; transform: rotate(92deg); }
-
-.map-fallback-pin {
-  position: absolute;
-  width: 18px;
-  height: 18px;
-  border: 4px solid var(--tao-white);
-  border-radius: 50%;
-  background: var(--tao-black);
-  box-shadow: var(--tao-shadow-sm);
-}
-
-.pin-origin { top: 43%; left: 43%; }
-.pin-destination { top: 60%; left: 66%; background: var(--tao-accent); }
 
 .map-scrim {
   position: fixed;
