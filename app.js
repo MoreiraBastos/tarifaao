@@ -388,10 +388,6 @@ function updateCurrentTimeDisplay() {
   }
 }
 
-window.initGoogleMapsCallback = function () {
-  initMapBackground();
-};
-
 function initMapBackground() {
   const canvas = $("#appMap");
   if (!canvas || !window.google?.maps || backgroundMap) return;
@@ -1609,6 +1605,7 @@ function seedDemoResults() {
 function initApp() {
   initLoadingScreen();
   updatePrivacyCopy();
+  initMapBackground();
   initEvents();
   updateCurrentTimeDisplay();
   window.setInterval(updateCurrentTimeDisplay, 1000);
