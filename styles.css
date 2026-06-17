@@ -273,16 +273,14 @@ body.app-ready .loading-screen {
   height: 42px;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(255,255,255,.84);
-  background: rgba(255,255,255,.82);
-  color: var(--tao-black);
-  box-shadow: 0 10px 26px rgba(0,0,0,.08);
-  backdrop-filter: blur(18px);
+  border: none;
+  background: transparent;
+  color: var(--tao-white);
+  filter: drop-shadow(0 1px 4px rgba(0,0,0,.55));
 }
 
 .map-control:hover {
-  background: var(--tao-white);
-  box-shadow: var(--tao-shadow-sm);
+  opacity: .8;
 }
 
 .target-icon {
@@ -316,7 +314,6 @@ body.app-ready .loading-screen {
 
 .settings-glyph {
   display: block;
-  color: var(--tao-black);
   font-size: 25px;
   line-height: 1;
   transform: translateY(-1px);
@@ -382,6 +379,8 @@ body.app-ready .loading-screen {
   display: grid;
   gap: 1px;
   background: var(--tao-line);
+  border-radius: 14px;
+  overflow: hidden;
 }
 
 .location-field {
@@ -579,7 +578,7 @@ textarea {
   inset: 0;
   background: linear-gradient(90deg, transparent, rgba(255,255,255,.74), transparent);
   transform: translateX(-100%);
-  animation: skeleton-shimmer 1.1s ease-in-out infinite;
+  animation: skeleton-shimmer 1.8s ease-in-out infinite;
 }
 
 .suggestion-skeleton {
@@ -857,6 +856,12 @@ p {
 
 .skeleton-card {
   pointer-events: none;
+  animation: skeleton-fade-in 0.5s ease both;
+}
+
+@keyframes skeleton-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .skeleton-logo {

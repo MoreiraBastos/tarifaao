@@ -90,9 +90,10 @@ let currentRoute = {
 };
 let currentResults = [];
 let selectedRide = null;
-let currentSort = "price";
+let currentSort = "eta";
 let backgroundMap = null;
 let backgroundRouteLine = null;
+let backgroundRouteAnimation = null;
 let backgroundRouteMarkers = [];
 let pickerMap = null;
 let pickerMarker = null;
@@ -399,7 +400,8 @@ function initMapBackground() {
     disableDefaultUI: true,
     zoomControl: true,
     zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_BOTTOM },
-    gestureHandling: "greedy"
+    gestureHandling: "greedy",
+    clickableIcons: false
   });
 
   document.body.classList.add("google-map-ready");
@@ -410,6 +412,10 @@ function initMapBackground() {
 }
 
 function clearBackgroundRoute() {
+  if (backgroundRouteAnimation) {
+    clearInterval(backgroundRouteAnimation);
+    backgroundRouteAnimation = null;
+  }
   backgroundRouteMarkers.forEach(marker => marker.setMap(null));
   backgroundRouteMarkers = [];
 
@@ -455,17 +461,32 @@ function updateRouteMap(route = currentRoute) {
   });
 
   if (isValidLocation(pickup) && isValidLocation(destination)) {
+    const dashSymbol = {
+      path: "M 0,-1 0,1",
+      strokeOpacity: 1,
+      scale: 3.5
+    };
     backgroundRouteLine = new google.maps.Polyline({
       path: [
         { lat: pickup.lat, lng: pickup.lng },
         { lat: destination.lat, lng: destination.lng }
       ],
-      strokeColor: "#071a2f",
-      strokeOpacity: 0.82,
-      strokeWeight: 4,
+      strokeColor: "#0f62fe",
+      strokeOpacity: 0,
+      strokeWeight: 0,
       map: backgroundMap,
-      clickable: false
+      clickable: false,
+      icons: [{ icon: dashSymbol, offset: "0", repeat: "18px" }]
     });
+
+    let animOffset = 0;
+    backgroundRouteAnimation = setInterval(() => {
+      animOffset = (animOffset + 1) % 200;
+      if (!backgroundRouteLine) return;
+      backgroundRouteLine.setOptions({
+        icons: [{ icon: dashSymbol, offset: (animOffset / 2) + "%", repeat: "18px" }]
+      });
+    }, 40);
 
     const bounds = new google.maps.LatLngBounds();
     bounds.extend({ lat: pickup.lat, lng: pickup.lng });
@@ -565,8 +586,8 @@ function renderResultsSkeleton(pickup, destination) {
   $("#resultsMeta").textContent = "A calcular distância e estimativas...";
 
   const list = $("#rideList");
-  list.innerHTML = Array.from({ length: 4 }).map(() => `
-    <article class="ride-card skeleton-card" aria-hidden="true">
+  list.innerHTML = Array.from({ length: 6 }).map((_, i) => `
+    <article class="ride-card skeleton-card" aria-hidden="true" style="animation-delay:${i * 80}ms">
       <span class="skeleton-logo"></span>
       <div class="ride-main">
         <span class="skeleton-line strong"></span>
@@ -1202,7 +1223,8 @@ function initPickerMap(center) {
       zoom: center.zoom || 13,
       disableDefaultUI: true,
       zoomControl: true,
-      gestureHandling: "greedy"
+      gestureHandling: "greedy",
+      clickableIcons: false
     });
     pickerMap.addListener("click", (event) => {
       selectMapPoint(event.latLng.lat(), event.latLng.lng());
