@@ -98,6 +98,7 @@ let backgroundRouteMarkers = [];
 let pickerMap = null;
 let pickerMarker = null;
 let userCurrentLocation = null;
+let userLocationMarker = null;
 let activeMapFieldId = null;
 let pendingMapLocation = null;
 let mapSelectionToken = 0;
@@ -408,7 +409,40 @@ function initMapBackground() {
   window.setTimeout(() => {
     google.maps.event.trigger(backgroundMap, "resize");
     updateRouteMap(currentRoute);
+    if (isValidLocation(userCurrentLocation)) updateUserLocationMarker(userCurrentLocation);
   }, 300);
+}
+
+function updateUserLocationMarker(location) {
+  if (!backgroundMap || !window.google?.maps || !isValidLocation(location)) return;
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44">
+    <circle cx="22" cy="22" r="20" fill="#4285F4" fill-opacity="0.18">
+      <animate attributeName="r" values="10;20;10" dur="2.4s" repeatCount="indefinite"/>
+      <animate attributeName="fill-opacity" values="0.32;0;0.32" dur="2.4s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="22" cy="22" r="9" fill="#4285F4" stroke="white" stroke-width="2.5"/>
+  </svg>`;
+
+  const icon = {
+    url: `data:image/svg+xml,${encodeURIComponent(svg)}`,
+    scaledSize: new google.maps.Size(44, 44),
+    anchor: new google.maps.Point(22, 22)
+  };
+
+  const pos = { lat: location.lat, lng: location.lng };
+  if (userLocationMarker) {
+    userLocationMarker.setPosition(pos);
+    userLocationMarker.setIcon(icon);
+  } else {
+    userLocationMarker = new google.maps.Marker({
+      position: pos,
+      map: backgroundMap,
+      icon,
+      clickable: false,
+      zIndex: 5
+    });
+  }
 }
 
 function clearBackgroundRoute() {
@@ -1317,6 +1351,7 @@ function requestCurrentLocation(options = {}) {
     const { latitude, longitude } = position.coords;
     const fallbackLocation = toLocation(formatFallbackAddress(latitude, longitude), latitude, longitude);
     userCurrentLocation = fallbackLocation;
+    updateUserLocationMarker(fallbackLocation);
 
     if (!options.force && input.value.trim() && input.dataset.autofilledLocation !== "true") {
       input.placeholder = placeholder;
@@ -1328,6 +1363,7 @@ function requestCurrentLocation(options = {}) {
     try {
       const resolvedLocation = await reverseGeocode(latitude, longitude);
       userCurrentLocation = resolvedLocation;
+      updateUserLocationMarker(resolvedLocation);
       if (!options.force && input.value.trim() && input.dataset.autofilledLocation !== "true") return;
       setFieldLocation("pickupInput", resolvedLocation, { autofill: true });
     } catch {
