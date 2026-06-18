@@ -955,7 +955,10 @@ async function geocodeSuggestions(query) {
   const cleanQuery = query.trim();
   if (cleanQuery.length < 2) return [];
 
-  const cacheKey = cleanQuery.toLowerCase();
+  const locationKey = isValidLocation(userCurrentLocation)
+    ? `_${Math.round(userCurrentLocation.lat * 20)}_${Math.round(userCurrentLocation.lng * 20)}`
+    : "";
+  const cacheKey = cleanQuery.toLowerCase() + locationKey;
   if (suggestionCache.has(cacheKey)) {
     return sortSuggestionsByUserDistance(suggestionCache.get(cacheKey));
   }
@@ -963,9 +966,15 @@ async function geocodeSuggestions(query) {
   const service = getAutocompleteService();
   if (!service) return [];
 
+  const requestOptions = { input: cleanQuery, componentRestrictions: { country: "ao" } };
+  if (isValidLocation(userCurrentLocation)) {
+    requestOptions.location = new google.maps.LatLng(userCurrentLocation.lat, userCurrentLocation.lng);
+    requestOptions.radius = 25000;
+  }
+
   const predictions = await new Promise((resolve) => {
     service.getPlacePredictions(
-      { input: cleanQuery, componentRestrictions: { country: "ao" } },
+      requestOptions,
       (preds, status) =>
         resolve(status === google.maps.places.PlacesServiceStatus.OK ? preds || [] : [])
     );

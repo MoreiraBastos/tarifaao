@@ -1280,6 +1280,7 @@ p {
 
 .support-item {
   grid-template-columns: minmax(0, 1fr) 18px;
+  text-decoration: none;
 }
 
 .support-item::after {
