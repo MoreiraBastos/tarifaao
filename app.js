@@ -19,7 +19,7 @@ const APPS = [
     perKm: 310,
     availability: 0.98,
     logo: "assets/yango.png",
-    url: "yango-ao://"
+    url: "yangoao://"
   },
   {
     id: "heetch",
